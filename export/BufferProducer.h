@@ -5,12 +5,14 @@
 #ifndef STREAMFS_BUFFERPRODUCER_H
 #define STREAMFS_BUFFERPRODUCER_H
 
-#include <BufferPool.h>
-
 template <typename T> class BufferPool;
 
 template <class T>
 class BufferProducer {
+    template <typename T1>
+    friend  class BufferPool;
+
+public:
     void queueBuffer(T &buffer);
 protected:
     void setBufferPool(BufferPool<T> *bufferPool) { mBufferPool = bufferPool; }

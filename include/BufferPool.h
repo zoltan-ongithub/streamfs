@@ -7,40 +7,68 @@
 
 #include <boost/circular_buffer.hpp>
 #include <config.h>
+#include <array>
 #include "BufferProducer.h"
 #include "BufferConsumer.h"
 
-typedef int8_t  buffer_chunk[BUFFER_CHUNK_SIZE];
+using buffer_chunk  = std::array<unsigned char, BUFFER_CHUNK_SIZE>;
 
 struct BufferList{
     buffer_chunk* chunks;
     uint64_t length;
 };
-template <typename T> class BufferProducer;
-template <typename T> class BufferConsumer;
 
+/**
+ * Generic buffer pool.
+ * Buffer pool is responsible to free the producer/consumer pointers.
+ *
+ * @tparam T
+ */
 template <class T>
 class BufferPool {
 
 public:
-    explicit BufferPool(BufferProducer<T> producer, BufferConsumer<T> consumer, uint64_t preallocBufSize) :
+    /**
+     * Buffer pool
+     * @param producer - pointer to producer.
+     * @param consumer  - pointer to consumer
+     * @param preallocBufSize  - number of chunk memories to maintain.
+     */
+    explicit BufferPool(BufferProducer<T> *producer, BufferConsumer<T> *consumer, uint64_t preallocBufSize) :
         mProducer(producer),
         mConsumer(consumer),
-        mCircBuf(preallocBufSize) {
-        mProducer.setBufferPool(this);
+        mCircBuf(preallocBufSize)
+        {
+        mProducer->setBufferPool(this);
     }
     /**
      * Read buffer until the head or MAX_BUFFER_LIST_COUNT number of chunks
      * @param bufferChunk
      * @param lastChunk - if last chunk is null, we will read the last buffer chunk.
      */
-    virtual void readHead(BufferList& bufferChunks, const BufferList* lastChunks);
+    virtual void readHead(BufferList& bufferChunks, const BufferList* lastChunks) = 0;
 
     virtual void pushBuffer(T& buffer);
 
+    /**
+     * Get circular buffer maximum capacity
+     * @return
+     */
+    size_t getCapacity() {
+        return mCircBuf.capacity();
+    }
+
+    /**
+     * Get current size of the ring buffer
+     * @return
+     */
+    size_t getSize() {
+        return mCircBuf.size();
+    }
+
 private:
-    BufferProducer<T> &mProducer;
-    BufferConsumer<T> &mConsumer;
+    std::shared_ptr<BufferProducer<T>> mProducer;
+    std::shared_ptr<BufferConsumer<T>> mConsumer;
     boost::circular_buffer<T > mCircBuf;
 };
 
