@@ -8,14 +8,15 @@
 #include <PluginInterface.h>
 #include <memory>
 #include <string>
+#include <BufferProducer.h>
 
 namespace streamfs {
 
-class SamplePlugin : public PluginInterface {
+class SamplePlugin : public PluginInterface,  public BufferProducer<buffer_chunk> {
 public:
     std::string getId() override;
 
-    void startPlayback() override;
+    void startPlayback(std::string uri) override;
 
     void stopPlayback() override;
 
@@ -23,9 +24,11 @@ public:
 
     void registerCallback(std::weak_ptr<PluginCallbackInterface> cb) override;
 
+    BufferProducer<buffer_chunk> *getBufferProducer() override;
+
 private:
     std::weak_ptr<PluginCallbackInterface> mCb;
-    PluginConfig mConfig;
+    PluginConfig mConfig{};
 };
 
 }
