@@ -16,6 +16,10 @@ namespace streamfs {
  * Plugin manager for dynamically loaded stream plugins
  */
 class StreamPluginManager {
+    struct PluginState {
+        std::shared_ptr<streamfs::PluginInterface> interface;
+        std::shared_ptr<PluginCallbackInterface> pluginCallbackInt;
+    };
 
 public:
     /**
@@ -24,12 +28,16 @@ public:
      * @param configuration
      * @return 0 on success
      */
-    int loadPlugins(PluginManagerConfig configuration);
+    int loadPlugins(const PluginManagerConfig& configuration);
 
     explicit StreamPluginManager();
 
+    void initPlugins();
+
 private:
-    std::map<std::string, std::unique_ptr<streamfs::PluginInterface>> mPlugins;
+    std::map<std::string, std::shared_ptr<PluginState>> mPlugins;
+    std::mutex mPluginMtx;
+
 };
 }
 

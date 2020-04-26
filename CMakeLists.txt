@@ -4,6 +4,11 @@ project(streamlink)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+include(CheckFileOffsetBits)
+CHECK_FILE_OFFSET_BITS()
+# fuse defines
+ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
+
 find_package (Threads)
 
 include(cmake/googletest.cmake)
@@ -31,17 +36,23 @@ add_library(streamlink SHARED
         export/BufferProducer.h
         src/BufferConsumer.cpp
         src/ByteBufferPool.cpp
-        include/BufferConsumer.h)
+        include/VirtualFSProvider.cpp
+        include/VirtualFSProvider.h
+        src/fuse/IFuse.cpp
+        include/fuse/IFuse.h
+        include/BufferConsumer.h src/PluginInterfaceImpl.cpp src/PluginInterfaceImpl.h)
 
 find_package (glog)
 
 add_subdirectory(tests)
 
-set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
-find_package(Boost 1.71.0 COMPONENTS core)
+find_package(Boost 1.45.0 COMPONENTS core filesystem)
+
+find_package(FUSE REQUIRED)
 
 fetch_googletest(
         ${PROJECT_SOURCE_DIR}/cmake
@@ -50,7 +61,7 @@ fetch_googletest(
 
 add_library(sampleplugin SHARED
         sample/SamplePlugin.cpp
-        tests/test_main.cpp tests/test_main.h src/ByteBufferPool.cpp export/ByteBufferPool.h export/MessageQueue.h export/PluginConfig.h include/PluginService.cpp include/PluginService.h export/ServiceRequest.h)
+        export/FileInterface.h)
 
 add_dependencies(streamlink sampleplugin)
 target_link_libraries (sampleplugin
@@ -61,12 +72,17 @@ target_link_libraries (streamlink
         PUBLIC
         dl
         ${CMAKE_THREAD_LIBS_INIT}
+        ${FUSE_LIBRARIES}
+        ${Boost_LIBRARIES}
         glog)
 
-target_link_libraries (streamlink
-        ${Boost_LIBRARIES})
 
-add_executable(streamfs main.cpp export/MessageQueue.h include/PluginService.cpp include/PluginService.h)
-#rget_link_libraries(streamfs streamlink)
+add_executable(streamfs main.cpp
+        export/MessageQueue.h
+        src/PluginService.cpp
+        include/PluginService.h
+        )
 
-target_link_libraries (streamfs streamlink)
+target_link_libraries (streamfs
+         streamlink
+        )
