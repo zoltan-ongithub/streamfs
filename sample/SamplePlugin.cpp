@@ -23,6 +23,9 @@ void SamplePlugin::updateConfiguration(const PluginConfig &config) {
 
 void SamplePlugin::registerCallback(std::weak_ptr<PluginCallbackInterface> cb) {
     mCb = cb;
+    std::vector<std::string> config;
+    config.emplace_back("sample_ts");
+    cb.lock()->setAvailableStreams(config);
 }
 
 BufferProducer<buffer_chunk> *SamplePlugin::getBufferProducer() {

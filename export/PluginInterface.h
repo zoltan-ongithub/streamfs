@@ -13,6 +13,7 @@
 #include "BufferPool.h"
 #include "PluginConfig.h"
 #include "PluginService.h"
+#include "VirtualFSProvider.h"
 
 namespace streamfs {
 
@@ -66,7 +67,9 @@ public:
      */
     virtual BufferProducer<buffer_chunk>* getBufferProducer() = 0;
 
+    std::shared_ptr<VirtualFSProvider> provider;
 };
+
 }
 
 extern "C" {

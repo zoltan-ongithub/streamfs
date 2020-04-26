@@ -4,6 +4,11 @@ add_executable(
         unit_tests
         test_main.cpp
 )
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+
+find_package(Boost 1.71.0 COMPONENTS core filesystem)
 
 target_link_libraries(
         unit_tests

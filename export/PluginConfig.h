@@ -14,7 +14,6 @@ public:
 public:
     // Generic configuration variables
     std::map<std::string, std::string> configVars;
-
     uint64_t seek_buffer_size_ms;
 };
 

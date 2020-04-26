@@ -8,11 +8,12 @@
 #include <thread>
 #include <MessageQueue.h>
 #include <ServiceRequest.h>
+#include "VirtualFSProvider.h"
 
 namespace streamfs {
 class PluginInterface;
 
-class PluginService {
+class PluginService : public VirtualFsCallbackHandler {
 public:
     PluginService(PluginInterface *iFace) {}
 
