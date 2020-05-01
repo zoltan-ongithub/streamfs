@@ -11,6 +11,7 @@
 static unsigned int bufferReceivedCount_g = 0;
 
 class TestProducer : public BufferProducer<buffer_chunk>{
+public:
 
 };
 
@@ -22,20 +23,20 @@ class TestConsumer : public BufferConsumer<buffer_chunk> {
 
 class TestBufferPool : public BufferPool<buffer_chunk > {
 public:
-    TestBufferPool(BufferProducer<buffer_chunk> *pProducer,
-            BufferConsumer<buffer_chunk> *pConsumer, uint64_t i)
+    TestBufferPool(const ByteBufferPool::shared_producer_type& pProducer,
+                   const ByteBufferPool::shared_consumer_type& pConsumer, uint64_t i)
             : BufferPool(pProducer, pConsumer, i) {
 
     }
 
-    void readHead(BufferList &bufferChunks, const BufferList *lastChunks) override {
-
+    void read(BufferList *bufferChunks, size_t length, uint64_t offset) override {
+            BufferPool::read(bufferChunks, length, offset);
     }
 
 };
 TEST(BufferPool, PassSingleElement) {
-    BufferProducer<buffer_chunk> *producer = new TestProducer();
-    BufferConsumer<buffer_chunk> *consumer = new TestConsumer();
+    ByteBufferPool::shared_producer_type producer = ByteBufferPool::shared_producer_type(new TestProducer());
+    ByteBufferPool::shared_consumer_type consumer = ByteBufferPool::shared_consumer_type(new TestConsumer());
     buffer_chunk chunk;
     uint64_t allocSize = 1024;
     TestBufferPool  *pool = new TestBufferPool(producer, consumer, allocSize);

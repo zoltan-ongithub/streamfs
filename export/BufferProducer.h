@@ -13,7 +13,10 @@ class BufferProducer {
     friend  class BufferPool;
 
 public:
-    void queueBuffer(T &buffer);
+    virtual void queueBuffer(T &buffer)  {
+        mBufferPool->pushBuffer(buffer);
+    }
+
 protected:
     void setBufferPool(BufferPool<T> *bufferPool) { mBufferPool = bufferPool; }
 private:

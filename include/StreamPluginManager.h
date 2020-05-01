@@ -18,7 +18,7 @@ namespace streamfs {
 class StreamPluginManager {
     struct PluginState {
         std::shared_ptr<streamfs::PluginInterface> interface;
-        std::shared_ptr<PluginCallbackInterface> pluginCallbackInt;
+        std::shared_ptr<VirtualFSProvider> provider;
     };
 
 public:

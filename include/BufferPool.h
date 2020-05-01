@@ -24,7 +24,7 @@ struct BufferList{
  *
  * @tparam T
  */
-template <class T>
+template <typename T>
 class BufferPool {
 
 public:
@@ -34,19 +34,19 @@ public:
      * @param consumer  - pointer to consumer
      * @param preallocBufSize  - number of chunk memories to maintain.
      */
-    explicit BufferPool(BufferProducer<T> *producer, BufferConsumer<T> *consumer, uint64_t preallocBufSize) :
+    explicit BufferPool(
+            std::shared_ptr<BufferProducer<T>> producer,
+            std::shared_ptr<BufferConsumer<T>> consumer,
+            uint64_t preallocBufSize):
         mProducer(producer),
         mConsumer(consumer),
-        mCircBuf(preallocBufSize)
+        mCircBuf(preallocBufSize),
+        mTotalBufCount(0)
         {
-        mProducer->setBufferPool(this);
-    }
-    /**
-     * Read buffer until the head or MAX_BUFFER_LIST_COUNT number of chunks
-     * @param bufferChunk
-     * @param lastChunk - if last chunk is null, we will read the last buffer chunk.
-     */
-    virtual void readHead(BufferList& bufferChunks, const BufferList* lastChunks) = 0;
+            mProducer->setBufferPool(this);
+        }
+
+    virtual void read(BufferList* bufferChunks, size_t length, uint64_t offset) = 0;
 
     virtual void pushBuffer(T& buffer);
 
@@ -69,7 +69,10 @@ public:
 private:
     std::shared_ptr<BufferProducer<T>> mProducer;
     std::shared_ptr<BufferConsumer<T>> mConsumer;
-    boost::circular_buffer<T > mCircBuf;
+    boost::circular_buffer<T> mCircBuf;
+    uint64_t mTotalBufCount;
+
+    void lockWaitForRead();
 };
 
 

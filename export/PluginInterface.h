@@ -13,16 +13,9 @@
 #include "BufferPool.h"
 #include "PluginConfig.h"
 #include "PluginService.h"
-#include "VirtualFSProvider.h"
+#include "PluginCallbackInterface.h"
 
 namespace streamfs {
-
-class PluginCallbackInterface {
-public:
-    virtual void setAvailableStreams(std::vector<std::string> streamIds) = 0;
-    virtual void updateConfig(PluginConfig &config) = 0;
-};
-
 class PluginService;
 
 /**
@@ -30,50 +23,44 @@ class PluginService;
  */
 class PluginInterface : public PluginService {
 public:
-    PluginInterface() : PluginService(this) {};
-/**
- * Get plugin identifier
- * @return
- */
-    virtual std::string getId() = 0;
+    PluginInterface(PluginCallbackInterface* cb) : PluginService(cb), mCb(cb) {};
 
-/**
- * Register callbackBufferProducer.
- * Called before startPlayback once. Plugin is responsible to manage a local
- * reference to the week pointer.
- */
-    virtual void registerCallback(std::weak_ptr<PluginCallbackInterface> cb) {
-    }
-
-/**
- * Start play
- */
-    virtual void startPlayback(std::string uri) = 0;
-
-/**
- * Stop play
- */
-    virtual void stopPlayback() = 0;
-
-  /**
- * Update plugin configuration. Called first time before `registerCallback`
- * @param config - configuration
- */
+    /**
+   * Update plugin configuration. Called first time before `registerCallback`
+   * @param config - configuration
+   */
     virtual void updateConfiguration(const PluginConfig &config) = 0;
 
     /**
      * Get buffer producer.
      * @return pointer to buffer producer.
      */
-    virtual BufferProducer<buffer_chunk>* getBufferProducer() = 0;
+    virtual BufferProducer<buffer_chunk> *getBufferProducer() = 0;
 
-    std::shared_ptr<VirtualFSProvider> provider;
+    /**
+     * Get plugin identifier
+     * @return
+     */
+    virtual std::string getId() = 0;
+
+    /**
+     * Stop play
+     */
+    virtual void stopPlayback() = 0;
+
+    virtual int open(std::string path)  =  0;
+
+    virtual int read(std::string path,  char *buf,
+                     size_t size, uint64_t offset)  =  0;
+
+    PluginCallbackInterface* mCb;
+
 };
 
 }
 
 extern "C" {
 // Implement function in plugin to create a new plugin interface
-streamfs::PluginInterface *INIT_STREAMFS_PLUGIN();
+streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface* cb);
 }
 #endif //STREAMFS_PLUGININTERFACE_H

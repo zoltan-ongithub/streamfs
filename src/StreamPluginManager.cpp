@@ -4,7 +4,8 @@
 
 
 #include "StreamPluginManager.h"
-#include "PluginInterfaceImpl.h"
+#include "PluginCbImpl.h"
+#include "PluginCallbackInterface.h"
 #include <filesystem>
 #include <iostream>
 #include <set>
@@ -54,11 +55,18 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
             continue;
         }
 
-        typedef streamfs::PluginInterface*(*create_fn)();
+        typedef streamfs::PluginInterface*(*create_fn)(PluginCallbackInterface*);
+
         create_fn creator = nullptr;
         *reinterpret_cast<void**>(&creator) = pluginLoad;
 
-        streamfs::PluginInterface*  plugin = creator();
+
+        auto* pin(new streamfs::PluginCbImpl());
+        auto* cb = dynamic_cast<PluginCallbackInterface*>(pin);
+
+        std::shared_ptr<PluginState> pluginState(new PluginState());
+
+        std::shared_ptr<streamfs::PluginInterface>  plugin(creator(cb));
 
         if (plugin == nullptr) {
             dlclose(hndl);
@@ -66,14 +74,17 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
             continue;
         }
 
-        std::shared_ptr<PluginState> pluginState(new PluginState);
+        pluginState->interface = plugin;
+        auto& fsProvider = IFuse::getInstance();
 
-        pluginState->interface =  std::unique_ptr<streamfs::PluginInterface>(plugin);
-        pluginState->pluginCallbackInt =
-        std::shared_ptr<streamfs::PluginCallbackInterface>(new PluginInterfaceImpl());
+        std::shared_ptr<VirtualFSProvider> provider(new VirtualFSProvider(plugin->getId(),
+                plugin, fsProvider, true));
 
-        mPlugins.insert(std::make_pair(std::string(plugin->getId()),
-               pluginState));
+        pluginState->interface =  std::shared_ptr<streamfs::PluginInterface>(plugin);
+
+        pluginState->provider = provider;
+
+        mPlugins.insert(std::make_pair(std::string(plugin->getId()), pluginState));
 
         LOG(INFO) << "Loaded plugin:" << plugin->getId();
     }
@@ -84,22 +95,6 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
 void StreamPluginManager::initPlugins() {
     std::lock_guard<std::mutex> lock(mPluginMtx);
 
-    for (auto& p: mPlugins) {
-        auto name = p.first;
-
-        auto pState = p.second;
-
-        std::weak_ptr<VirtualFsCallbackHandler> cbHandler = pState->interface;
-
-        auto& fsProvider = IFuse::getInstance();
-
-        std::shared_ptr<VirtualFSProvider> provider(
-                new VirtualFSProvider(name, cbHandler, fsProvider, true)
-                );
-
-        pState->interface->provider = provider;
-        pState->interface->registerCallback(pState->pluginCallbackInt);
-    }
 }
 };
 

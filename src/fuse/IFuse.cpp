@@ -27,7 +27,6 @@ fuse_operations *IFuse::getFuseOperations() {
 int
 IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
     memset(stbuf, 0, sizeof(struct stat));
-    LOG(INFO) << "Inside getAttrCallback. path " << path;
 
     fs::path p(path);
     std::string pluginName;
@@ -49,19 +48,48 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
         return 0;
     }
 
-
     if ( !pluginName.empty() && plugin != fsProviders.end() && it == p.end()){
         stbuf->st_mode = S_IFDIR | 0755;
-        stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
-        //stbuf->st_mode = S_IFREG | 0777;
-        //stbuf->st_nlink = 1;
-        //stbuf->st_size = 0;
-        LOG(INFO) << "sample plugin ----->";
         return 0;
+    } else {
+        auto provider = findProvider(path);
+
+        if(provider != nullptr) {
+            auto fsNodes = provider->getNodes();
+            for(auto node : fsNodes) {
+                if(node.name == it->string()){
+                    switch (node.type) {
+                        case FILE_TYPE:
+                            stbuf->st_nlink = 2;
+                            stbuf->st_size = UINT64_MAX;
+                            stbuf->st_mode = S_IFREG | 0777;
+                            return 0;
+                        case DIRECTORY_TYPE:
+                            stbuf->st_mode = S_IFDIR | 0755;
+                            stbuf->st_nlink = 2;
+                            return 0;
+                    }
+                }
+            }
+        }
     }
 
+
     return -ENOENT;
+}
+
+ VirtualFSProvider* IFuse::findProvider(const char* path) {
+     fs::path p(path);
+     auto b = p.begin();
+     std::advance(b, 1);
+     auto provider = fsProviders.find(b->string());
+
+     if (provider !=  fsProviders.end()) {
+         return provider->second;
+     } else {
+         return nullptr;
+     }
 }
 
 int
@@ -73,11 +101,8 @@ IFuse::readDirCallback(
         struct fuse_file_info *fi) {
 
     fs::path p(path);
-    LOG(INFO) << "Opening path:" << path;
     auto b = p.begin();
-
     auto root = b->c_str();
-
     auto pPair = fsProviders.find(root);
 
     filler(buf, ".", NULL, 0);
@@ -87,7 +112,16 @@ IFuse::readDirCallback(
         for(auto& provider : fsProviders) {
                 filler(buf, provider.first.c_str(), NULL, 0);
         }
+    }  else {
+        auto provider = findProvider(path);
+        if(provider != nullptr) {
+            auto fsNodes = provider->getNodes();
+            for(auto node : fsNodes) {
+                filler(buf, node.name.c_str(), NULL, 0);
+            }
+        }
     }
+
 
 #if 0
     if (pPair == fsProviders.end()) {
@@ -110,10 +144,28 @@ IFuse::readDirCallback(
     return 0;
 }
 
-int IFuse::openCallback(const char *path,
+int IFuse::openCallback(const char
+        *path,
         struct fuse_file_info *fi) {
-    LOG(INFO) << "Inside openCallback";
-    return 0;
+
+    auto provider = findProvider(path);
+    fs::path p(path);
+    auto b = p.begin();
+    std::advance(b, 2);
+    /**
+     * TODO: add HASH based file name lookup.
+     */
+    if (provider != nullptr){
+        auto fsNodes = provider->getNodes();
+
+        for(auto node : fsNodes) {
+            if(node.name == b->string()) {
+                return provider->open(node.name);
+            }
+          }
+    }
+
+    return -ENOENT;
 }
 
 int IFuse::readCallback(const char *path,
@@ -122,7 +174,27 @@ int IFuse::readCallback(const char *path,
         off_t offset,
         struct fuse_file_info *fi) {
     LOG(INFO) << "Inside readCallback";
+    auto provider = findProvider(path);
 
+    fs::path p(path);
+    auto b = p.begin();
+    std::advance(b, 2);
+
+    /**
+     * TODO: add HASH based file name lookup.
+     */
+    if (provider != nullptr){
+        auto fsNodes = provider->getNodes();
+        LOG(INFO) << "Found provider";
+        for(auto node : fsNodes) {
+            if(node.name == b->string()) {
+                LOG(INFO) << "Reading number of bytes: " << size << " offset: " << offset;
+                auto result = provider->read(node.name, buf, size, offset);
+                LOG(INFO) << "Read bytes " << result;
+                return result;
+            }
+        }
+    }
     return 0;
 }
 

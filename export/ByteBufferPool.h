@@ -9,9 +9,18 @@
 
 class ByteBufferPool : public BufferPool<buffer_chunk >{
 public:
-    ByteBufferPool(BufferProducer<buffer_chunk> *pProducer, BufferConsumer<buffer_chunk> *pConsumer, uint64_t i);
+    typedef std::shared_ptr<BufferProducer<buffer_chunk>>  shared_producer_type;
+    typedef std::shared_ptr<BufferConsumer<buffer_chunk>> shared_consumer_type;
 
-    void readHead(BufferList &bufferChunks, const BufferList *lastChunks) override;
+    ByteBufferPool(
+            shared_producer_type pProducer,
+            shared_consumer_type pConsumer,
+            uint64_t i);
+
+    void read(
+            BufferList* bufferChunks,
+            size_t length,
+            uint64_t offset) override;
 
     void pushBuffer(buffer_chunk &buffer) override;
 

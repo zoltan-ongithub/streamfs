@@ -4,14 +4,19 @@
 
 #include "ByteBufferPool.h"
 
-void ByteBufferPool::readHead(BufferList &bufferChunks, const BufferList *lastChunks) {
-
-}
+#include <utility>
 
 void ByteBufferPool::pushBuffer(buffer_chunk &buffer) {
+    BufferPool::pushBuffer(buffer);
+}
+
+ByteBufferPool::ByteBufferPool(ByteBufferPool::shared_producer_type pProducer,
+                               ByteBufferPool::shared_consumer_type pConsumer, uint64_t i) :
+        BufferPool(std::move(pProducer), std::move(pConsumer), i){
 
 }
 
-ByteBufferPool::ByteBufferPool(BufferProducer<buffer_chunk> *pProducer, BufferConsumer<buffer_chunk> *pConsumer,
-                               uint64_t i) : BufferPool(pProducer, pConsumer, i) {
+void ByteBufferPool::read(BufferList *bufferChunks, size_t length, uint64_t offset) {
+    BufferPool::read(bufferChunks, length, offset);
 }
+
