@@ -8,34 +8,46 @@
 #include <PluginInterface.h>
 #include <memory>
 #include <string>
+#include <utility>
 #include <BufferProducer.h>
+#include <BufferConsumer.h>
+#include <ByteBufferPool.h>
+#include "PluginCallbackInterface.h"
 
 namespace streamfs {
 
-class SamplePlugin : public PluginInterface,  public BufferProducer<buffer_chunk> {
+class SamplePlugin : public PluginInterface {
+    typedef std::string uri_type;
+    std::map<uri_type, std::shared_ptr<ByteBufferPool>> mBufferPool;
+
 public:
+    explicit SamplePlugin(PluginCallbackInterface* cb);
+
     std::string getId() override;
 
-    void startPlayback(std::string uri) override;
+    int open(std::string uri) override;
 
     void stopPlayback() override;
 
     void updateConfiguration(const PluginConfig &config) override;
 
-    void registerCallback(std::weak_ptr<PluginCallbackInterface> cb) override;
-
     BufferProducer<buffer_chunk> *getBufferProducer() override;
+    void newBufferNotify(buffer_chunk &buffer);
+
+    int read(std::string path, char *buf, size_t size, uint64_t offset) override;
 
 private:
-    std::weak_ptr<PluginCallbackInterface> mCb;
+    std::weak_ptr<streamfs::PluginCallbackInterface> mCb;
     PluginConfig mConfig{};
+    std::vector<std::string> mAvailableStreams;
+    ByteBufferPool::shared_consumer_type mConsumer;
 };
 
 }
 
 extern "C" {
-streamfs::PluginInterface *INIT_STREAMFS_PLUGIN() {
-    return new streamfs::SamplePlugin();
+streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface* cb) {
+    return new streamfs::SamplePlugin(cb);
 }
 }
 

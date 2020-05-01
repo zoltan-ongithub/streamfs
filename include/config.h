@@ -9,7 +9,7 @@
 #define STREAMFS_PLUGIN_DIRECTORY "plugins/"
 
 // Buffer chunk sizes
-#define BUFFER_CHUNK_SIZE 32 * 1024 /* 32k chunks */
+#define BUFFER_CHUNK_SIZE 4096 /* 4k chunks */
 
 // Max number of buffer chunks in a list
 #define MAX_BUFFER_LIST_COUNT 256

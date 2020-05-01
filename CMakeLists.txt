@@ -40,7 +40,7 @@ add_library(streamlink SHARED
         include/VirtualFSProvider.h
         src/fuse/IFuse.cpp
         include/fuse/IFuse.h
-        include/BufferConsumer.h src/PluginInterfaceImpl.cpp src/PluginInterfaceImpl.h)
+        include/BufferConsumer.h src/PluginCbImpl.cpp include/PluginCbImpl.h)
 
 find_package (glog)
 

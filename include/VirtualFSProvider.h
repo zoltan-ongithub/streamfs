@@ -12,15 +12,14 @@
 #include <glog/logging.h>
 #include <mutex>
 #include <FileInterface.h>
+#include "PluginInterface.h"
+#include "PluginCbImpl.h"
 
 enum NodeTypes {
     FILE_TYPE,
     DIRECTORY_TYPE,
 };
 
-class VirtualFsCallbackHandler {
-
-};
 
 class VirtualFSProvider {
     typedef std::string fileId;
@@ -34,23 +33,26 @@ class VirtualFSProvider {
 
 public:
     VirtualFSProvider(const std::string& name,
-            std::weak_ptr<VirtualFsCallbackHandler> cb,
-            FileInterface& fileInterface,
-            bool isPlugin);
+            std::weak_ptr<streamfs::PluginInterface> cb,
+            FileInterface& fileInterface, bool isPlugin);
+
     ~VirtualFSProvider();
 
     std::string getName() { return mName;}
 
-    void updateAvailableFiles(fileList &fList) {
-        std::lock_guard<std::mutex> lock(mFileListLock);
-        mFileList = fList;
-    }
 
     int attachProvider(VirtualFSProvider* provider) {
         if (provider == nullptr)
             return -1;
 
-        if (mFileList.find(provider->getName()) != mFileList.end()) {
+        auto inf = mCb.lock();
+
+        if (!inf)
+            return  -1;
+
+        auto fileList = inf->getAvailableStreams();
+
+        if (std::find(fileList.begin(), fileList.end(), provider->getName()) != fileList.end()) {
             LOG(ERROR) << "Can't attach new directory. File already exists:" << provider->getName();
             return -2;
         }
@@ -61,18 +63,19 @@ public:
 
     std::vector<FileNode> getNodes();
 
-    std::shared_ptr<VirtualFsCallbackHandler> getCallback() {
-        return mCb.lock();
-    }
+    int open(std::string node);
 
+    int read( std::string node, char *buf,
+              size_t size,
+              uint64_t offset);
 
 private:
-    fileList mFileList;
-    std::weak_ptr<VirtualFsCallbackHandler> mCb;
+    std::weak_ptr<streamfs::PluginInterface> mCb;
     std::mutex mFileListLock;
     std::string mName;
     std::set<std::unique_ptr<VirtualFSProvider>> mSubProviders;
     FileInterface& mFileInteface;
+    std::shared_ptr<streamfs::PluginCbImpl> mPluginInterface;
     bool mIsPluginHandler;
 };
 
