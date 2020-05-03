@@ -3,10 +3,12 @@
 //
 #include <iostream>
 #include <cstring>
+#include <memory>
+#include <fcntl.h>
 #include "ByteBufferPool.h"
 #include "SamplePlugin.h"
 /* 20MB buffer pool. Very very good and very very cheap*/
-#define BUFFER_POOL_SIZE 20 * 1024 * 1024
+#define BUFFER_POOL_SIZE  1024 * 5
 
 namespace streamfs {
 
@@ -25,8 +27,56 @@ private:
 
 class SampleProducer : public BufferProducer<buffer_chunk > {
 public:
+    SampleProducer(std::string uri) : mUri(uri), mThreadLoop(nullptr), mMustExit(false){
+    }
 
+    void loop() {
+
+        FILE* f = fopen("test.ts", "r");
+        if (f == nullptr) {
+            printf("Failed to open test.ts\n");
+            return;
+        }
+
+        buffer_chunk chunk;
+        size_t res;
+
+        do {
+            res = fread(chunk.data(), 1, chunk.size(), f);
+            queueBuffer(chunk, res != chunk.size(), res);
+            if (mMustExit) {
+                fclose(f);
+                return;
+            }
+        } while (res == chunk.size());
+        fclose(f);
+    }
+
+    void start() {
+        if (mThreadLoop != nullptr) {
+            mThreadLoop->join();
+        }
+
+        mThreadLoop = std::make_unique<std::thread>(&SampleProducer::loop, this);
+    };
+
+    ~SampleProducer() {
+    }
+
+    void stop() override {
+        BufferProducer::stop();
+        if(mThreadLoop) {
+            mThreadLoop->join();
+        }
+    }
+
+
+private:
+    std::string mUri;
+    std::unique_ptr<std::thread> mThreadLoop;
+    bool mMustExit;
 };
+
 SamplePlugin::SamplePlugin(PluginCallbackInterface* cb) :
     PluginInterface(cb) {
         mAvailableStreams.emplace_back("test1.tst");
@@ -41,10 +91,19 @@ std::string SamplePlugin::getId() {
 int SamplePlugin::open(std::string uri) {
     std::cout << "Opened path:" << uri << std::endl;
 
-    auto consumer = ByteBufferPool::shared_consumer_type(new SampleConsumer(this));
-    auto producer = ByteBufferPool::shared_producer_type(new SampleProducer());
-    auto mBufferPool = new ByteBufferPool(producer, consumer, BUFFER_POOL_SIZE);
+    mBufferPool.erase(uri);
 
+    auto p = new SampleProducer(uri);
+
+    auto consumer = ByteBufferPool::shared_consumer_type(new SampleConsumer(this));
+    auto producer = ByteBufferPool::shared_producer_type(p);
+
+    std::cout << "Starting: 1" << uri << std::endl;
+
+    mBufferPool.insert(std::make_pair(uri, std::make_shared<ByteBufferPool>( producer, consumer, BUFFER_POOL_SIZE)));
+    std::cout << "Starting:" << uri << std::endl;
+
+    p->start();
     return 0;
 }
 
@@ -57,15 +116,23 @@ void SamplePlugin::updateConfiguration(const PluginConfig &config) {
 }
 
 int SamplePlugin::read(std::string path, char *buf, size_t size, uint64_t offset) {
-    if (offset < 10000)
-    {
-        std::cout << "Reading! : " << size <<std::endl;
-        memset(buf, 'x', size);
-        return size;
 
+    if (size % BUFFER_CHUNK_SIZE != 0 || offset % BUFFER_CHUNK_SIZE != 0) {
+
+        std::cerr << "Invalid padding. We only support offset and size with " << BUFFER_CHUNK_SIZE << " modulo "
+            << size % BUFFER_CHUNK_SIZE  << " - " << offset % BUFFER_CHUNK_SIZE;
+        return 0;
     }
 
-    return 0;
+    auto bQueue = mBufferPool.find(path);
+
+    if (bQueue == mBufferPool.end()) {
+        std::cerr << "Could not find handler for path " << path;
+        return 0;
+    }
+
+    auto res = bQueue->second->read(buf, size / BUFFER_CHUNK_SIZE, offset / BUFFER_CHUNK_SIZE);
+    return res;
 }
 
 BufferProducer<buffer_chunk> *SamplePlugin::getBufferProducer() {

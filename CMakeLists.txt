@@ -4,6 +4,8 @@ project(streamlink)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+set( CMAKE_VERBOSE_MAKEFILE on )
+
 include(CheckFileOffsetBits)
 CHECK_FILE_OFFSET_BITS()
 # fuse defines
@@ -46,11 +48,11 @@ find_package (glog)
 
 add_subdirectory(tests)
 
-set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
-find_package(Boost 1.45.0 COMPONENTS core filesystem)
+find_package(Boost 1.45.0 COMPONENTS core thread filesystem)
 
 find_package(FUSE REQUIRED)
 

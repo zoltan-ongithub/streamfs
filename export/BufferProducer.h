@@ -5,6 +5,8 @@
 #ifndef STREAMFS_BUFFERPRODUCER_H
 #define STREAMFS_BUFFERPRODUCER_H
 
+#include <cstddef>
+
 template <typename T> class BufferPool;
 
 template <class T>
@@ -13,12 +15,17 @@ class BufferProducer {
     friend  class BufferPool;
 
 public:
-    virtual void queueBuffer(T &buffer)  {
-        mBufferPool->pushBuffer(buffer);
+    virtual void queueBuffer(T &buffer, bool lastBuffer = false, size_t lastBufferSize = 0) {
+        mBufferPool->pushBuffer(buffer, lastBuffer, lastBufferSize);
     }
 
+    virtual void stop();
+
 protected:
-    void setBufferPool(BufferPool<T> *bufferPool) { mBufferPool = bufferPool; }
+    void setBufferPool(BufferPool<T> *bufferPool) {
+
+        mBufferPool = bufferPool;
+    }
 private:
     BufferPool<T> *mBufferPool;
 };

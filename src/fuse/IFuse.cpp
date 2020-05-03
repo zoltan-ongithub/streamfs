@@ -173,9 +173,7 @@ int IFuse::readCallback(const char *path,
         size_t size,
         off_t offset,
         struct fuse_file_info *fi) {
-    LOG(INFO) << "Inside readCallback";
     auto provider = findProvider(path);
-
     fs::path p(path);
     auto b = p.begin();
     std::advance(b, 2);
@@ -185,12 +183,9 @@ int IFuse::readCallback(const char *path,
      */
     if (provider != nullptr){
         auto fsNodes = provider->getNodes();
-        LOG(INFO) << "Found provider";
         for(auto node : fsNodes) {
             if(node.name == b->string()) {
-                LOG(INFO) << "Reading number of bytes: " << size << " offset: " << offset;
                 auto result = provider->read(node.name, buf, size, offset);
-                LOG(INFO) << "Read bytes " << result;
                 return result;
             }
         }

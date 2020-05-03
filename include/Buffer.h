@@ -1,5 +1,5 @@
 //
-// Created by Zoltan Kuscsik on 4/17/20.
+// Created by Zoltan Kuscsik
 //
 
 #ifndef STREAMFS_BUFFER_H
