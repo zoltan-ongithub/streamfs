@@ -17,12 +17,12 @@ public:
             shared_consumer_type pConsumer,
             uint64_t i);
 
-    void read(
-            BufferList* bufferChunks,
+    size_t read(
+            char* bufferChunks,
             size_t length,
             uint64_t offset) override;
 
-    void pushBuffer(buffer_chunk &buffer) override;
+    void pushBuffer(buffer_chunk &buffer,  bool lastBuffer = false, size_t lastBufferSize = 0) override;
 
 };
 

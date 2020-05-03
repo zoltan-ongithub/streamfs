@@ -6,6 +6,8 @@
 #define STREAMFS_BUFFERPOOL_H
 
 #include <boost/circular_buffer.hpp>
+#include <boost/thread/condition.hpp>
+
 #include <config.h>
 #include <array>
 #include "BufferProducer.h"
@@ -38,17 +40,20 @@ public:
             std::shared_ptr<BufferProducer<T>> producer,
             std::shared_ptr<BufferConsumer<T>> consumer,
             uint64_t preallocBufSize):
-        mProducer(producer),
-        mConsumer(consumer),
-        mCircBuf(preallocBufSize),
-        mTotalBufCount(0)
+            mReadEnd(0),
+            mProducer(producer),
+            mConsumer(consumer),
+            mCircBuf(preallocBufSize),
+            mTotalBufCount(0),
+            mGotLastBuffer(false),
+            mLastBufferSize(0)
         {
             mProducer->setBufferPool(this);
         }
 
-    virtual void read(BufferList* bufferChunks, size_t length, uint64_t offset) = 0;
+    virtual size_t read(char* bufferChunks, size_t length, uint64_t offset) = 0;
 
-    virtual void pushBuffer(T& buffer);
+    virtual void pushBuffer(T& buffer,  bool lastBuffer = false, size_t lastBufferSize = 0);
 
     /**
      * Get circular buffer maximum capacity
@@ -66,13 +71,30 @@ public:
         return mCircBuf.size();
     }
 
+    ~BufferPool() {
+        printf("----CLOSING BUFFERPOOL -----\n");
+        mProducer->stop();
+    }
+
+private:
+    bool hasEnoughBytes() const { return mReadEnd <= mTotalBufCount || mGotLastBuffer; }
+
+    BufferPool(const BufferPool&);
+    BufferPool& operator = (const BufferPool&);
+
 private:
     std::shared_ptr<BufferProducer<T>> mProducer;
     std::shared_ptr<BufferConsumer<T>> mConsumer;
     boost::circular_buffer<T> mCircBuf;
     uint64_t mTotalBufCount;
+    boost::mutex m_mutex;
+    boost::mutex m_w_mutex;
 
+    boost::condition mNotEnoughBytes;
     void lockWaitForRead();
+    uint64_t mReadEnd;
+    bool  mGotLastBuffer;
+    size_t mLastBufferSize;
 };
 
 
