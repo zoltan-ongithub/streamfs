@@ -89,8 +89,11 @@ std::string SamplePlugin::getId() {
 }
 
 int SamplePlugin::open(std::string uri) {
+    std::lock_guard<std::mutex> lockGuard(mFopMutex);
     std::cout << "Opened path:" << uri << std::endl;
-
+    if (mBufferPool.find(uri) != mBufferPool.end()) {
+        return 0;
+    }
     mBufferPool.erase(uri);
 
     auto p = new SampleProducer(uri);
@@ -98,10 +101,7 @@ int SamplePlugin::open(std::string uri) {
     auto consumer = ByteBufferPool::shared_consumer_type(new SampleConsumer(this));
     auto producer = ByteBufferPool::shared_producer_type(p);
 
-    std::cout << "Starting: 1" << uri << std::endl;
-
     mBufferPool.insert(std::make_pair(uri, std::make_shared<ByteBufferPool>( producer, consumer, BUFFER_POOL_SIZE)));
-    std::cout << "Starting:" << uri << std::endl;
 
     p->start();
     return 0;
@@ -116,13 +116,7 @@ void SamplePlugin::updateConfiguration(const PluginConfig &config) {
 }
 
 int SamplePlugin::read(std::string path, char *buf, size_t size, uint64_t offset) {
-
-    if (size % BUFFER_CHUNK_SIZE != 0 || offset % BUFFER_CHUNK_SIZE != 0) {
-
-        std::cerr << "Invalid padding. We only support offset and size with " << BUFFER_CHUNK_SIZE << " modulo "
-            << size % BUFFER_CHUNK_SIZE  << " - " << offset % BUFFER_CHUNK_SIZE;
-        return 0;
-    }
+    std::lock_guard<std::mutex> lockGuard(mFopMutex);
 
     auto bQueue = mBufferPool.find(path);
 
@@ -131,7 +125,7 @@ int SamplePlugin::read(std::string path, char *buf, size_t size, uint64_t offset
         return 0;
     }
 
-    auto res = bQueue->second->read(buf, size / BUFFER_CHUNK_SIZE, offset / BUFFER_CHUNK_SIZE);
+    auto res = bQueue->second->readRandomAccess(buf, size , offset);
     return res;
 }
 

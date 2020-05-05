@@ -32,10 +32,14 @@ public:
 
     }
 
-    size_t read(char *bufferChunks, size_t length, uint64_t offset) override {
-            return BufferPool::read(bufferChunks, length, offset);
+    size_t read(char *bufferChunks, size_t length, uint64_t offset,  size_t left_padding, size_t right_padding) override {
+            return BufferPool<buffer_chunk >::read(bufferChunks, length, offset,  left_padding,
+                     right_padding);
     }
 
+    size_t readRandomAccess(char *data, size_t size, uint64_t offsetBytes) override {
+        return BufferPool::readRandomAccess(data, size, offsetBytes);
+    }
 };
 
 class TestCore : public ::testing::Test {
@@ -82,8 +86,7 @@ TEST_F(BufferPoolTest, ReadSingleElement) {
     producer->queueBuffer(chunk);
     buffer_chunk outPut;
 
-    pool->read( (char*) outPut.data(), 1, 0);
-    printf("Got -> %d", outPut[0]);
+    pool->read( (char*) outPut.data(), 1, 0, 0, 0);
     ASSERT_EQ(chunk, outPut);
 }
 
@@ -97,10 +100,32 @@ TEST_F(BufferPoolTest, ReadMultipleElement) {
     producer->queueBuffer(chunk2);
 
     char outputBytes[2 * chunk1.size()];
-    pool->read( outputBytes, 2, 0);
+    pool->read( outputBytes, 2, 0, 0, 0);
+
 
     ASSERT_EQ(memcmp(outputBytes, (const void*) chunk1.data(), chunk1.size()), 0 );
+
     ASSERT_EQ(memcmp(&outputBytes[chunk1.size()], (const void*) chunk2.data(), chunk2.size()), 0 );
+}
+
+TEST_F(BufferPoolTest, ReadUnalignedMultipleElement) {
+    buffer_chunk chunk1, chunk2;
+    int OFFS = 10;
+    memset(chunk1.data(), 8, chunk1.size());
+    producer->queueBuffer(chunk1);
+
+    memset(chunk2.data(), 9, chunk2.size());
+    producer->queueBuffer(chunk2);
+
+    char outputBytes[chunk1.size()];
+    {
+        for(OFFS = 0; OFFS < chunk1.size(); OFFS++) {
+            auto res = pool->readRandomAccess(outputBytes, chunk1.size(), OFFS);
+            ASSERT_EQ(res, chunk1.size());
+            ASSERT_EQ(memcmp(outputBytes, (const char *) (chunk1.data() + OFFS), OFFS), 0);
+            ASSERT_EQ(memcmp(&outputBytes[chunk1.size() - OFFS], (const void *) chunk2.data(), OFFS), 0);
+        }
+    }
 }
 
 
@@ -126,7 +151,7 @@ TEST_F(BufferPoolTest, ReadMultipleNonAlligned) {
     memset(outputBytes, 0, 2 * chunk1.size());
     ASSERT_EQ(buffer_is_empty(&outputBytes[LAST_BUFFER_SIZE], chunk2.size() - LAST_BUFFER_SIZE), 0);
 
-    int result = pool->read( outputBytes, 2, 0);
+    int result = pool->read( outputBytes, 2, 0, 0, 0);
 
     ASSERT_EQ(result, chunk1.size() + LAST_BUFFER_SIZE);
 
@@ -155,7 +180,7 @@ TEST_F(BufferPoolTest, LockUntilBufferAvailable) {
            producer->queueBuffer(chunk2);
         });
 
-    pool->read( outputBytes, 2, 0);
+    pool->read( outputBytes, 2, 0, 0, 0);
 
     ASSERT_EQ(memcmp(outputBytes, (const void*) chunk1.data(), chunk1.size()), 0 );
 
@@ -181,7 +206,7 @@ TEST_F(BufferPoolTest, LockUntilBufferAvailableStartEmpty) {
                              usleep(500000);
                              producer->queueBuffer(chunk1);
                          });
-    pool->read( outputBytes, 1, 0);
+    pool->read( outputBytes, 1, 0, 0, 0);
 
     ASSERT_EQ(memcmp(outputBytes, (const void*) chunk1.data(), chunk1.size()), 0 );
 
@@ -214,7 +239,7 @@ TEST_F(BufferPoolTest, ReadOverWriteBuffer) {
 
     producer->queueBuffer(chunk2);
 
-    auto result = pool->read( outputBytes, 1, allocSize);
+    auto result = pool->read( outputBytes, 1, allocSize, 0, 0);
 
     ASSERT_EQ(result, 1 * BUFFER_CHUNK_SIZE);
 
@@ -250,7 +275,7 @@ TEST_F(BufferPoolTest, ReadOverWriteBufferWithLock) {
                              producer->queueBuffer(chunk3);
                          });
 
-    auto result = pool->read( outputBytes, 2, allocSize);
+    auto result = pool->read( outputBytes, 2, allocSize, 0, 0);
 
     ASSERT_EQ(result, 2 * BUFFER_CHUNK_SIZE);
 
@@ -273,7 +298,7 @@ TEST_F(BufferPoolTest, ReadWrongLenght) {
 
     producer->queueBuffer(chunk1);
 
-    auto result = pool->read( outputBytes, allocSize + 2, 0);
+    auto result = pool->read( outputBytes, allocSize + 2, 0, 0, 0);
     ASSERT_EQ(result, 0);
 }
 
@@ -290,11 +315,11 @@ TEST_F(BufferPoolTest, ReadAfterLastItemReturnsEmpty) {
 
     producer->queueBuffer(chunk1, true, LAST_BUF_SIZE);;
 
-    auto result = pool->read( outputBytes, 2, 0);
+    auto result = pool->read( outputBytes, 2, 0, 0, 0);
 
     ASSERT_EQ(result, LAST_BUF_SIZE + chunk1.size());
 
-    result = pool->read( outputBytes, 2, 2);
+    result = pool->read( outputBytes, 2, 2, 0, 0);
     ASSERT_EQ(result, 0);
 }
 

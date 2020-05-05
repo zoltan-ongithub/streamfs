@@ -41,6 +41,7 @@ private:
     PluginConfig mConfig{};
     std::vector<std::string> mAvailableStreams;
     ByteBufferPool::shared_consumer_type mConsumer;
+    std::mutex mFopMutex;
 };
 
 }
