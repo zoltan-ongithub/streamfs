@@ -15,7 +15,15 @@ ByteBufferPool::ByteBufferPool(ByteBufferPool::shared_producer_type pProducer,
         BufferPool(std::move(pProducer), std::move(pConsumer), i){
 }
 
-size_t ByteBufferPool::read(char *bufferChunks, size_t length, uint64_t offset) {
-    return BufferPool::read(bufferChunks, length, offset);
+size_t ByteBufferPool::read(char *bufferChunks, size_t length, uint64_t offset,
+                            size_t left_padding,
+                            size_t right_padding
+        ) {
+    return BufferPool::read(bufferChunks, length, offset, left_padding, right_padding);
 }
 
+
+size_t ByteBufferPool::readRandomAccess(char* data, size_t size, uint64_t offsetBytes)   {
+    return BufferPool::readRandomAccess(data,  size, offsetBytes);
+
+}

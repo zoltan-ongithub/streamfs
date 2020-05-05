@@ -9,11 +9,15 @@
 #include <cstring>
 #include <algorithm>    // std::max
 
+
+
 template <>
 size_t BufferPool<buffer_chunk>::read(
         char* bufferChunks,
         size_t length,
-        uint64_t offset)
+        uint64_t offset,
+        size_t left_padding,
+        size_t right_padding)
 {
     boost::mutex::scoped_lock lock(m_mutex);
     auto capacity = mCircBuf.capacity();
@@ -23,6 +27,13 @@ size_t BufferPool<buffer_chunk>::read(
     if ( (mGotLastBuffer &&  offset >= mTotalBufCount)  ) {
 
         // producer closed the data stream.
+        return 0;
+    }
+
+    if (left_padding >= BUFFER_CHUNK_SIZE ||
+        right_padding >= BUFFER_CHUNK_SIZE ||
+        (length - left_padding - right_padding) < 0 ) {
+
         return 0;
     }
 
@@ -42,32 +53,54 @@ size_t BufferPool<buffer_chunk>::read(
         boost::mutex::scoped_lock lock(m_w_mutex);
 
         auto returnSize = length * BUFFER_CHUNK_SIZE;
-        auto lastItemCopySize = BUFFER_CHUNK_SIZE;
+        size_t lastItemCopySize;
 
-        if (mGotLastBuffer && length >= (mTotalBufCount - offset)) {
-            length = mTotalBufCount - offset;
-            returnSize = (mTotalBufCount - offset - 1) * BUFFER_CHUNK_SIZE + mLastBufferSize;
-            lastItemCopySize = mLastBufferSize;
-        }
+
+        size_t leftSkip;
+        size_t rightSkip;
+        auto off = 0;
 
         for (size_t i = 0; i < length; i++) {
-            auto off = BUFFER_CHUNK_SIZE * i;
+
+            if ( i == 0) {
+                leftSkip = left_padding;
+            } else {
+                leftSkip = 0;
+            }
+
+            if (i == length - 1) {
+                 rightSkip = right_padding;
+            } else {
+                 rightSkip = 0;
+            }
+
+            lastItemCopySize = BUFFER_CHUNK_SIZE - leftSkip - rightSkip;
+
+            if (mGotLastBuffer && i == mTotalBufCount - 1) {
+                lastItemCopySize = std::min(mLastBufferSize, lastItemCopySize);
+            }
+
             auto endPos = std::min(mCircBuf.size(), capacity);
             auto startPos = endPos - (mTotalBufCount - offset) + i;
 
-            if (i == length - 1) {
-                memcpy(bufferChunks + off,
-                       mCircBuf[startPos].data(),
+            memcpy(bufferChunks + off,
+                       mCircBuf[startPos].data() + leftSkip,
                        lastItemCopySize);
-            } else {
-                memcpy(bufferChunks + off,
-                       mCircBuf[startPos].data(),
-                       BUFFER_CHUNK_SIZE);
-            }
+            off += lastItemCopySize;
         }
 
-        return returnSize;
+        return off;
     }
+}
+
+template <>
+size_t BufferPool<buffer_chunk>::readRandomAccess(char* data, size_t size, uint64_t offsetBytes)
+{
+    auto left_padding = offsetBytes % BUFFER_CHUNK_SIZE;
+    auto right_padding = (BUFFER_CHUNK_SIZE - (left_padding + size) % BUFFER_CHUNK_SIZE) % BUFFER_CHUNK_SIZE;
+    size_t length = (left_padding + right_padding + size) / BUFFER_CHUNK_SIZE;
+    auto offset = offsetBytes / BUFFER_CHUNK_SIZE;
+    return read(data, length, offset, left_padding, right_padding);
 }
 
 template <>

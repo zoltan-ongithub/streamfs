@@ -20,8 +20,12 @@ public:
     size_t read(
             char* bufferChunks,
             size_t length,
-            uint64_t offset) override;
+            uint64_t offset,
+            size_t left_padding,
+            size_t right_padding
+            ) override;
 
+    size_t readRandomAccess(char* data, size_t size, uint64_t offsetBytes) override ;
     void pushBuffer(buffer_chunk &buffer,  bool lastBuffer = false, size_t lastBufferSize = 0) override;
 
 };
