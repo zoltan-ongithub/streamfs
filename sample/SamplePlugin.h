@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <BufferProducer.h>
 #include <BufferConsumer.h>
 #include <ByteBufferPool.h>
 #include "PluginCallbackInterface.h"
@@ -31,7 +30,6 @@ public:
 
     void updateConfiguration(const PluginConfig &config) override;
 
-    BufferProducer<buffer_chunk> *getBufferProducer() override;
     void newBufferNotify(buffer_chunk &buffer);
 
     int read(std::string path, char *buf, size_t size, uint64_t offset) override;

@@ -14,4 +14,6 @@
 // Max number of buffer chunks in a list
 #define MAX_BUFFER_LIST_COUNT 256
 
+using buffer_chunk  = std::array<unsigned char, BUFFER_CHUNK_SIZE>;
+
 #endif //STREAMFS_CONFIG_H
