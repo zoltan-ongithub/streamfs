@@ -32,12 +32,6 @@ public:
     virtual void updateConfiguration(const PluginConfig &config) = 0;
 
     /**
-     * Get buffer producer.
-     * @return pointer to buffer producer.
-     */
-    virtual BufferProducer<buffer_chunk> *getBufferProducer() = 0;
-
-    /**
      * Get plugin identifier
      * @return
      */

@@ -32,7 +32,7 @@ add_library(streamlink SHARED
         src/Stream.cpp
         src/MemAllocator.cpp include/MemAllocator.h
         src/ActiveBuffer.cpp include/ActiveBuffer.h
-        src/BufferPool.cpp include/BufferPool.h
+        src/BufferPool.cpp export/BufferPool.h
         src/BufferProducer.cpp
         src/BufferPool.cpp
         export/BufferProducer.h
@@ -42,19 +42,29 @@ add_library(streamlink SHARED
         include/VirtualFSProvider.h
         src/fuse/IFuse.cpp
         include/fuse/IFuse.h
-        include/BufferConsumer.h src/PluginCbImpl.cpp include/PluginCbImpl.h)
+        export/BufferConsumer.h
+        src/PluginCbImpl.cpp
+        include/PluginCbImpl.h
+
+        )
 
 find_package (glog)
 
 add_subdirectory(tests)
+# set(Boost_DEBUG 1)
 
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
+set(Boost_USE_STATIC_RUNTIME ON)
 
-find_package(Boost 1.45.0 COMPONENTS core thread filesystem)
+find_package(Boost REQUIRED COMPONENTS thread filesystem )
 
 find_package(FUSE REQUIRED)
+find_package(CURL REQUIRED)
+
+include_directories(${CURL_INCLUDE_DIR})
+include_directories( ${Boost_INCLUDE_DIRS} )
+
 
 fetch_googletest(
         ${PROJECT_SOURCE_DIR}/cmake
@@ -66,8 +76,11 @@ add_library(sampleplugin SHARED
         export/FileInterface.h)
 
 add_dependencies(streamlink sampleplugin)
+
 target_link_libraries (sampleplugin
+        ${Boost_LIBRARIES}
         ${CMAKE_THREAD_LIBS_INIT}
+        ${CURL_LIBRARIES}
         glog)
 
 target_link_libraries (streamlink
@@ -82,9 +95,13 @@ target_link_libraries (streamlink
 add_executable(streamfs main.cpp
         export/MessageQueue.h
         src/PluginService.cpp
-        include/PluginService.h
+        export/PluginService.h
         )
 
 target_link_libraries (streamfs
-         streamlink
+        streamlink
+        ${Boost_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${FUSE_LIBRARIES}
+        streamlink
         )

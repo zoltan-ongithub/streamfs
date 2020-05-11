@@ -6,7 +6,6 @@
 #include "fuse/IFuse.h"
 #include <boost/filesystem.hpp>
 #include <string>
-#include <iostream>
 #define fs boost::filesystem
 
 IFuse::fsProviderMapType IFuse::fsProviders;

@@ -4,11 +4,13 @@
 #include <iostream>
 #include <cstring>
 #include <memory>
-#include <fcntl.h>
+#include <curl/curl.h>
 #include "ByteBufferPool.h"
 #include "SamplePlugin.h"
+#include <algorithm>
+
 /* 20MB buffer pool. Very very good and very very cheap*/
-#define BUFFER_POOL_SIZE  1024 * 5
+#define BUFFER_POOL_SIZE  10 * 1024 * 5
 
 namespace streamfs {
 
@@ -25,13 +27,17 @@ private:
     SamplePlugin* mPlugin;
 };
 
+std::mutex writeLock;
+
+extern "C" size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
+
 class SampleProducer : public BufferProducer<buffer_chunk > {
 public:
-    SampleProducer(std::string uri) : mUri(uri), mThreadLoop(nullptr), mMustExit(false){
+    SampleProducer(std::string uri) : mUri(uri), mThreadLoop(nullptr), mMustExit(false), mCurrentOffset(0){
+        curl_global_init(CURL_GLOBAL_ALL);
     }
 
-    void loop() {
-
+    void readFile() {
         FILE* f = fopen("test.ts", "r");
         if (f == nullptr) {
             printf("Failed to open test.ts\n");
@@ -52,6 +58,24 @@ public:
         fclose(f);
     }
 
+    void loop() {
+        auto* curl_handle = curl_easy_init();
+       // curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
+        curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, this);
+        curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl_handle, CURLOPT_BUFFERSIZE, BUFFER_CHUNK_SIZE);
+        // curl_easy_setopt(curl_handle, CURLOPT_URL,  "http://media.rdk.tvlab.cloud/TS/DR2.ts");
+        curl_easy_setopt(curl_handle, CURLOPT_URL,  "http://localhost:8080");
+
+        auto result = curl_easy_perform(curl_handle);
+
+        queueBuffer(tempBuffer, true, mCurrentOffset);
+
+        printf("Exit with error %d\n", result);
+        curl_easy_cleanup(curl_handle);
+        curl_global_cleanup();
+    }
+
     void start() {
         if (mThreadLoop != nullptr) {
             mThreadLoop->join();
@@ -61,6 +85,29 @@ public:
     };
 
     ~SampleProducer() {
+    }
+
+    size_t write(void *ptr, size_t size, size_t nmemb) {
+
+        auto total_size = nmemb * size;
+        auto remaining_data = total_size;
+
+        while (remaining_data > 0) {
+            auto freeBytesInTempBuf = BUFFER_CHUNK_SIZE - mCurrentOffset;
+
+            auto writeLength = std::min(freeBytesInTempBuf, remaining_data);
+
+            memcpy(&tempBuffer[mCurrentOffset], &((char*)ptr )[ total_size - remaining_data], writeLength);
+            mCurrentOffset += writeLength;
+
+            if (mCurrentOffset == BUFFER_CHUNK_SIZE) {
+                queueBuffer(tempBuffer, false, tempBuffer.size());
+                mCurrentOffset = 0;
+            }
+
+            remaining_data -= writeLength;
+        }
+        return size * nmemb;
     }
 
     void stop() override {
@@ -74,8 +121,17 @@ public:
 private:
     std::string mUri;
     std::unique_ptr<std::thread> mThreadLoop;
+    buffer_chunk tempBuffer;
+    size_t mCurrentOffset;
     bool mMustExit;
 };
+
+extern "C" size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream)
+{
+    std::lock_guard<std::mutex> lockGuard(writeLock);
+    SampleProducer* producer = (SampleProducer*) stream;
+    return producer->write(ptr, size, nmemb);
+}
 
 SamplePlugin::SamplePlugin(PluginCallbackInterface* cb) :
     PluginInterface(cb) {
@@ -91,6 +147,7 @@ std::string SamplePlugin::getId() {
 int SamplePlugin::open(std::string uri) {
     std::lock_guard<std::mutex> lockGuard(mFopMutex);
     std::cout << "Opened path:" << uri << std::endl;
+
     if (mBufferPool.find(uri) != mBufferPool.end()) {
         return 0;
     }
@@ -119,6 +176,12 @@ int SamplePlugin::read(std::string path, char *buf, size_t size, uint64_t offset
     std::lock_guard<std::mutex> lockGuard(mFopMutex);
 
     auto bQueue = mBufferPool.find(path);
+    static int i = 0;
+    i++;
+
+    if (i%20 == 0 ) {
+        printf("Reading offset %d size %d\n", offset, size);
+    }
 
     if (bQueue == mBufferPool.end()) {
         std::cerr << "Could not find handler for path " << path;
@@ -127,10 +190,6 @@ int SamplePlugin::read(std::string path, char *buf, size_t size, uint64_t offset
 
     auto res = bQueue->second->readRandomAccess(buf, size , offset);
     return res;
-}
-
-BufferProducer<buffer_chunk> *SamplePlugin::getBufferProducer() {
-    return nullptr;
 }
 
 void SamplePlugin::newBufferNotify(buffer_chunk &buffer) {

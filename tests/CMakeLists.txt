@@ -1,17 +1,14 @@
-find_package(Boost 1.71.0 COMPONENTS core)
-
 add_executable(
         unit_tests
         test_main.cpp
 )
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
 
-find_package(Boost 1.71.0 COMPONENTS core filesystem thread)
+find_package(Boost COMPONENTS filesystem thread)
 
-SET(CMAKE_CXX_FLAGS_DEBUG "-O0")
-SET(CMAKE_C_FLAGS_DEBUG "-O0")
+# SET(CMAKE_CXX_FLAGS_DEBUG "-O0")
+# SET(CMAKE_C_FLAGS_DEBUG "-O0")
 
 target_link_libraries(
         unit_tests
