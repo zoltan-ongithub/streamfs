@@ -6,8 +6,7 @@
 #include "StreamPluginManager.h"
 #include "PluginCbImpl.h"
 #include "PluginCallbackInterface.h"
-#include <filesystem>
-#include <iostream>
+#include <boost/filesystem.hpp>
 #include <set>
 #include <dlfcn.h>
 #include <glog/logging.h>
@@ -15,7 +14,7 @@
 #include <VirtualFSProvider.h>
 #include <fuse/IFuse.h>
 
-namespace fs = std::filesystem;
+namespace fs = boost::filesystem;
 
 namespace  streamfs {
 
@@ -31,7 +30,7 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
 
         if(fs::is_regular_file(entry.status())) {
            if( entry.path().extension() == ".so") {
-                sharedLibs.insert(entry.path());
+                sharedLibs.insert(entry.path().string());
            }
         }
     }
