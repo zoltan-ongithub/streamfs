@@ -6,7 +6,9 @@
 #define STREAMLINK_IFUSE_H
 #define FUSE_USE_VERSION 26
 
+extern "C" {
 #include <fuse.h>
+}
 #include <string>
 #include <map>
 #include <VirtualFSProvider.h>
@@ -29,7 +31,7 @@ public:
 
     typedef  std::map<std::string, VirtualFSProvider*> fsProviderMapType;
 
-    fuse_operations* getFuseOperations();
+    fuse_operations getFuseOperations();
 
 private:
     IFuse();

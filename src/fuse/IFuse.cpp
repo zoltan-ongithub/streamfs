@@ -13,14 +13,16 @@ IFuse::fsProviderMapType IFuse::fsProviders;
 IFuse::IFuse(){
 }
 
-fuse_operations *IFuse::getFuseOperations() {
-    static fuse_operations fop = {
-            .getattr = IFuse::getAttrCallback,
-            .open = IFuse::openCallback,
-            .read = IFuse::readCallback,
-            .readdir = IFuse::readDirCallback
-    };
-    return &fop;
+fuse_operations IFuse::getFuseOperations() {
+    static fuse_operations ops = []{
+        fuse_operations fop{};
+        fop.getattr = IFuse::getAttrCallback;
+	fop.open = IFuse::openCallback;
+	fop.read = IFuse::readCallback;
+	fop.readdir = IFuse::readDirCallback;
+	return fop;
+    }();
+  return ops;
 }
 
 int
@@ -29,7 +31,6 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
 
     fs::path p(path);
     std::string pluginName;
-
 
     auto it = p.begin();
     std::advance(it, 1);
@@ -61,7 +62,7 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
                     switch (node.type) {
                         case FILE_TYPE:
                             stbuf->st_nlink = 2;
-                            stbuf->st_size = UINT64_MAX;
+                            stbuf->st_size = INT64_MAX;
                             stbuf->st_mode = S_IFREG | 0777;
                             return 0;
                         case DIRECTORY_TYPE:
@@ -73,8 +74,6 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
             }
         }
     }
-
-
     return -ENOENT;
 }
 
@@ -121,25 +120,6 @@ IFuse::readDirCallback(
         }
     }
 
-
-#if 0
-    if (pPair == fsProviders.end()) {
-        LOG(WARNING) << "Could not find provider for path" << path;
-        return -ENOENT;
-    }
-
-
-
-    auto provider = pPair->second;
-
-    LOG(INFO) << "Getting nodes for " << pPair->first;
-
-    for (auto item : provider->getNodes()) {
-        if (item.type == NodeTypes::FILE_TYPE) {
-            filler(buf, item.name.c_str(), NULL, 0);
-        }
-    }
-#endif
     return 0;
 }
 
@@ -163,7 +143,6 @@ int IFuse::openCallback(const char
             }
           }
     }
-
     return -ENOENT;
 }
 

@@ -9,8 +9,7 @@
 #include "SamplePlugin.h"
 #include <algorithm>
 
-/* 20MB buffer pool. Very very good and very very cheap*/
-#define BUFFER_POOL_SIZE  10 * 1024 * 5
+#define BUFFER_POOL_SIZE  100 * 1024
 
 namespace streamfs {
 
@@ -64,8 +63,8 @@ public:
         curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, this);
         curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data);
         curl_easy_setopt(curl_handle, CURLOPT_BUFFERSIZE, BUFFER_CHUNK_SIZE);
-        // curl_easy_setopt(curl_handle, CURLOPT_URL,  "http://media.rdk.tvlab.cloud/TS/DR2.ts");
-        curl_easy_setopt(curl_handle, CURLOPT_URL,  "http://localhost:8080");
+        curl_easy_setopt(curl_handle, CURLOPT_URL,  "http://media.rdk.tvlab.cloud/TS/DR2.ts");
+        //curl_easy_setopt(curl_handle, CURLOPT_URL,  "http://localhost:8080");
 
         auto result = curl_easy_perform(curl_handle);
 
@@ -143,14 +142,16 @@ SamplePlugin::SamplePlugin(PluginCallbackInterface* cb) :
 std::string SamplePlugin::getId() {
     return "sample_plugin";
 }
+static int  read_offset_c = 0;
 
 int SamplePlugin::open(std::string uri) {
     std::lock_guard<std::mutex> lockGuard(mFopMutex);
     std::cout << "Opened path:" << uri << std::endl;
-
+    read_offset_c = 0;
     if (mBufferPool.find(uri) != mBufferPool.end()) {
         return 0;
     }
+
     mBufferPool.erase(uri);
 
     auto p = new SampleProducer(uri);
@@ -177,11 +178,12 @@ int SamplePlugin::read(std::string path, char *buf, size_t size, uint64_t offset
 
     auto bQueue = mBufferPool.find(path);
     static int i = 0;
-    i++;
 
-    if (i%20 == 0 ) {
+    if (read_offset_c%20 == 0 ) {
         printf("Reading offset %d size %d\n", offset, size);
     }
+
+    read_offset_c++;
 
     if (bQueue == mBufferPool.end()) {
         std::cerr << "Could not find handler for path " << path;

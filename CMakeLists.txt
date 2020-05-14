@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.10)
 project(streamlink)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -54,7 +54,7 @@ add_subdirectory(tests)
 # set(Boost_DEBUG 1)
 
 set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_MULTITHREADED OFF)
 set(Boost_USE_STATIC_RUNTIME ON)
 
 find_package(Boost REQUIRED COMPONENTS thread filesystem )
