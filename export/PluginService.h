@@ -6,8 +6,8 @@
 #define STREAMLINK_PLUGINSERVICE_H
 
 #include <thread>
-#include <MessageQueue.h>
-#include <ServiceRequest.h>
+#include "MessageQueue.h"
+#include "ServiceRequest.h"
 #include "PluginConfig.h"
 #include "PluginCallbackInterface.h"
 class VirtualFSProvider;

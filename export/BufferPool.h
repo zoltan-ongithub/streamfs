@@ -8,7 +8,7 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/thread/condition.hpp>
 
-#include <config.h>
+#include "config.h"
 #include <array>
 #include "BufferProducer.h"
 #include "BufferConsumer.h"
