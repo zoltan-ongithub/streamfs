@@ -116,7 +116,6 @@ public:
         }
     }
 
-
 private:
     std::string mUri;
     std::unique_ptr<std::thread> mThreadLoop;
@@ -136,7 +135,9 @@ SamplePlugin::SamplePlugin(PluginCallbackInterface* cb) :
     PluginInterface(cb) {
         mAvailableStreams.emplace_back("test1.tst");
         mAvailableStreams.emplace_back("test2.tst");
-        setAvailableStreams(mAvailableStreams);
+        mAvailableStreams.emplace_back("test3.tst");
+
+    setAvailableStreams(mAvailableStreams);
 }
 
 std::string SamplePlugin::getId() {

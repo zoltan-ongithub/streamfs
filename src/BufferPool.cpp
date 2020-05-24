@@ -52,7 +52,6 @@ size_t BufferPool<buffer_chunk>::read(
     {
         boost::mutex::scoped_lock lock(m_w_mutex);
 
-        auto returnSize = length * BUFFER_CHUNK_SIZE;
         size_t lastItemCopySize;
 
 
