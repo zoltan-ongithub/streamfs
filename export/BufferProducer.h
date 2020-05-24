@@ -30,5 +30,4 @@ private:
     BufferPool<T> *mBufferPool;
 };
 
-
 #endif //STREAMFS_BUFFERPRODUCER_H

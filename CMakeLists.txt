@@ -21,6 +21,14 @@ include_directories(
         logging/src
         )
 
+add_library(buqu SHARED
+        src/BufferPool.cpp export/BufferPool.h
+        src/BufferProducer.cpp
+        src/BufferPool.cpp
+        export/BufferProducer.h
+        src/BufferConsumer.cpp
+        src/ByteBufferPool.cpp
+)
 
 add_library(streamlink SHARED
         src/StreamPluginManager.cpp
@@ -82,6 +90,13 @@ target_link_libraries (sampleplugin
         ${CMAKE_THREAD_LIBS_INIT}
         ${CURL_LIBRARIES}
         glog)
+
+target_link_libraries(buqu
+        ${Boost_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${CURL_LIBRARIES}
+        glog
+        )
 
 target_link_libraries (streamlink
         PUBLIC
