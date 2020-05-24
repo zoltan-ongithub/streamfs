@@ -13,7 +13,20 @@ ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
 find_package (Threads)
 
-include(cmake/googletest.cmake)
+set(PUBLIC_HEADERS
+    export/BufferConsumer.h
+    export/BufferPool.h
+    export/BufferProducer.h
+    export/ByteBufferPool.h
+    export/config.h
+    export/FileInterface.h
+    export/MessageQueue.h
+    export/PluginCallbackInterface.h
+    export/PluginConfig.h
+    export/PluginInterface.h
+    export/PluginService.h
+    export/ServiceRequest.h
+)
 
 include_directories(
         include
@@ -74,11 +87,6 @@ include_directories(${CURL_INCLUDE_DIR})
 include_directories( ${Boost_INCLUDE_DIRS} )
 
 
-fetch_googletest(
-        ${PROJECT_SOURCE_DIR}/cmake
-        ${PROJECT_BINARY_DIR}/googletest
-)
-
 add_library(sampleplugin SHARED
         sample/SamplePlugin.cpp
         export/FileInterface.h)
@@ -120,3 +128,20 @@ target_link_libraries (streamfs
         ${FUSE_LIBRARIES}
         streamlink
         )
+
+
+set_target_properties(buqu PROPERTIES PUBLIC_HEADER  "${PUBLIC_HEADERS}")
+
+INSTALL(TARGETS buqu
+        LIBRARY DESTINATION lib
+        PUBLIC_HEADER DESTINATION include/streamfs
+)
+
+INSTALL(TARGETS streamlink
+        LIBRARY DESTINATION lib
+        PUBLIC_HEADER DESTINATION include/streamfs
+)
+
+install (TARGETS streamfs
+         RUNTIME DESTINATION bin)
+

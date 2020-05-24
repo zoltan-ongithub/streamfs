@@ -6,6 +6,8 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 
 find_package(Boost COMPONENTS filesystem thread)
+find_package(GTest REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
 
 # SET(CMAKE_CXX_FLAGS_DEBUG "-O0")
 # SET(CMAKE_C_FLAGS_DEBUG "-O0")
@@ -13,6 +15,7 @@ find_package(Boost COMPONENTS filesystem thread)
 target_link_libraries(
         unit_tests
         gtest_main
+        gtest
         streamlink
 )
 
