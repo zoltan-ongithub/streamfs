@@ -103,6 +103,17 @@ size_t BufferPool<buffer_chunk>::readRandomAccess(char* data, size_t size, uint6
 }
 
 template <>
+void BufferPool<buffer_chunk>::clear()
+{
+    boost::mutex::scoped_lock lock(m_w_mutex);
+    mGotLastBuffer = false;
+    mTotalBufCount = 0;
+    mReadEnd = 0;
+    mLastBufferSize = 0;
+    mCircBuf.clear();
+}
+
+template <>
 void BufferPool<buffer_chunk>::pushBuffer(buffer_chunk& buffer, bool lastBuffer, size_t lastBufferSize) {
     boost::mutex::scoped_lock lock(m_w_mutex);
 

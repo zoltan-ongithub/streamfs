@@ -25,5 +25,8 @@ size_t ByteBufferPool::read(char *bufferChunks, size_t length, uint64_t offset,
 
 size_t ByteBufferPool::readRandomAccess(char* data, size_t size, uint64_t offsetBytes)   {
     return BufferPool::readRandomAccess(data,  size, offsetBytes);
+}
 
+void ByteBufferPool::clear() {
+    BufferPool::clear();
 }

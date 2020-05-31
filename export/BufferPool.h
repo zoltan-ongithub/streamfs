@@ -58,6 +58,11 @@ public:
     virtual void pushBuffer(T& buffer,  bool lastBuffer = false, size_t lastBufferSize = 0);
 
     /**
+     * Clear buffer. Can be called only from the consumer thread
+     */
+    virtual void clear();
+
+    /**
      * Get circular buffer maximum capacity
      * @return
      */
