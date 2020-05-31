@@ -14,7 +14,7 @@ using namespace streamfs;
 #include <fcntl.h>
 
 PluginManagerConfig config = {
-        .plugin_directory = "."
+        .pluginDirectories = {".", "/usr/lib/streamfs/", "/usr/local/lib/streamfs"}
 };
 
 StreamPluginManager pluginManager;

@@ -6,6 +6,7 @@
 #define STREAMFS_STREAMPLUGINMANAGER_H
 #include <memory>
 #include <map>
+#include <string>
 #include "PluginManagerConfig.h"
 #include "PluginImpl.h"
 #include "PluginInterface.h"
@@ -19,6 +20,7 @@ class StreamPluginManager {
     struct PluginState {
         std::shared_ptr<streamfs::PluginInterface> interface;
         std::shared_ptr<VirtualFSProvider> provider;
+        std::string libraryPath;
     };
 
 public:

@@ -6,6 +6,7 @@
 #define STREAMFS_PLUGINMANAGERCONFIG_H
 
 #include <string>
+#include <vector>
 
 /**
  * Configuration for plugin manager
@@ -14,7 +15,7 @@ struct PluginManagerConfig {
     /**
      * Location of plugins
      */
-    std::string plugin_directory;
+    std::vector<std::string> pluginDirectories;
 };
 
 

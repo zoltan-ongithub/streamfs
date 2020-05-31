@@ -145,3 +145,6 @@ INSTALL(TARGETS streamlink
 install (TARGETS streamfs
          RUNTIME DESTINATION bin)
 
+INSTALL(TARGETS sampleplugin
+        LIBRARY DESTINATION lib/streamfs/
+        )
