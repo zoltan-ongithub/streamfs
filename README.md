@@ -1,7 +1,10 @@
 Generic stream to fs service
 
 Dependencies:
- - libfuse-dev
+```
+ sudo apt-get install libfuse-dev libboost-thread-dev cmake libboost-filesystem-dev build-essential libgtest-dev libgoogle-glog-dev
+```
+
 
 
 Ubuntu install gtest depenency:
