@@ -25,5 +25,5 @@ mkdir build
 cd build
 cmake ../
 sudo make install
-ldconfig
+sudo ldconfig
 ```
