@@ -97,6 +97,13 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
         pluginState->provider = provider;
         pluginState->libraryPath = soFile;
 
+        if(plugin->getInterfaceVersion() != STREAMFS_INTERFACE_VERSION) {
+            LOG(WARNING) << "Incorrect interface version: " << plugin->getInterfaceVersion() <<
+                " minimum interface version requested: " << STREAMFS_INTERFACE_VERSION;
+            LOG(WARNING) << "Plugin ignored: " << plugin->getId();
+            continue;
+        }
+
         mPlugins.insert(std::make_pair(std::string(plugin->getId()), pluginState));
 
         LOG(INFO) << "Loaded plugin:" << plugin->getId();
@@ -107,7 +114,7 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
 
 void StreamPluginManager::initPlugins() {
     std::lock_guard<std::mutex> lock(mPluginMtx);
-
 }
+
 };
 

@@ -18,6 +18,8 @@
 namespace streamfs {
 class PluginService;
 
+#define STREAMFS_INTERFACE_VERSION 1
+
 /**
  * Generic plugin interface for 3rd party plugins
  */
@@ -48,6 +50,12 @@ public:
                      size_t size, uint64_t offset)  =  0;
 
     virtual int write(std::string node, const char *buf, size_t size, uint64_t offset) = 0;
+
+    /**
+     *
+     * @return interfaces version
+     */
+    virtual uint32_t getInterfaceVersion() { return STREAMFS_INTERFACE_VERSION; }
 
     PluginCallbackInterface* mCb;
 
