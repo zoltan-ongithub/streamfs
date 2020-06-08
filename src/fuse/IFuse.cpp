@@ -21,6 +21,7 @@ fuse_operations IFuse::getFuseOperations() {
 	fop.read = IFuse::readCallback;
 	fop.readdir = IFuse::readDirCallback;
 	fop.write = IFuse::writeFileCallback;
+	fop.truncate = IFuse::truncate;
 	return fop;
     }();
   return ops;
@@ -163,11 +164,8 @@ int IFuse::openCallback(const char
     return -ENOENT;
 }
 
-int IFuse::readCallback(const char *path,
-        char *buf,
-        size_t size,
-        off_t offset,
-        struct fuse_file_info *fi) {
+int IFuse::readCallback(const char *path, char *buf, size_t size, off_t offset,
+                        struct fuse_file_info *fi) {
     auto provider = findProvider(path);
     fs::path p(path);
     auto b = p.begin();
@@ -207,10 +205,15 @@ int IFuse::writeFileCallback(
     auto node = findNode(provider, path);
 
     if (node.empty()) {
-        return -1;
+        LOG(INFO) << "Could not find node " << path;
+        return bufSize;
     }
 
     provider->write(path, buf, bufSize, offset);
 
+    return provider->write(path, buf, bufSize, offset);
+}
+
+int IFuse::truncate(const char *path, off_t lenght) {
     return 0;
 }
