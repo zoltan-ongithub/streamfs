@@ -47,6 +47,8 @@ public:
     virtual int read(std::string path,  char *buf,
                      size_t size, uint64_t offset)  =  0;
 
+    virtual int write(std::string node, const char *buf, size_t size, uint64_t offset) = 0;
+
     PluginCallbackInterface* mCb;
 
 };

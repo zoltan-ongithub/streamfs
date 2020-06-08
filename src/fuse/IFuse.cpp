@@ -20,6 +20,7 @@ fuse_operations IFuse::getFuseOperations() {
 	fop.open = IFuse::openCallback;
 	fop.read = IFuse::readCallback;
 	fop.readdir = IFuse::readDirCallback;
+	fop.write = IFuse::writeFileCallback;
 	return fop;
     }();
   return ops;
@@ -122,6 +123,22 @@ IFuse::readDirCallback(
 
     return 0;
 }
+static std::string findNode(VirtualFSProvider* provider, const char* fusePath) {
+    fs::path p(fusePath);
+    auto b = p.begin();
+    std::advance(b, 2);
+    if (provider != nullptr){
+        auto fsNodes = provider->getNodes();
+        for(auto node : fsNodes) {
+            // TODO: provider should be use hash based lookup
+            if(node.name == b->string()) {
+                return node.name;
+            }
+        }
+    }
+
+    return "";
+}
 
 int IFuse::openCallback(const char
         *path,
@@ -178,4 +195,22 @@ void IFuse::registerFsProvider(VirtualFSProvider* provider) {
 
 void IFuse::removeFsProvider(std::string id) {
     fsProviders.erase(id);
+}
+
+int IFuse::writeFileCallback(
+        const char *path,
+        const char *buf,
+        size_t bufSize,
+        off_t offset,
+        struct fuse_file_info *) {
+    auto provider = findProvider(path);
+    auto node = findNode(provider, path);
+
+    if (node.empty()) {
+        return -1;
+    }
+
+    provider->write(path, buf, bufSize, offset);
+
+    return 0;
 }

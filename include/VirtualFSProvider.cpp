@@ -83,3 +83,13 @@ int VirtualFSProvider::open(std::string basicString) {
     }
     return -ENOENT;
 }
+
+int VirtualFSProvider::write(std::string node, const char *buf, size_t size, uint64_t offset) {
+    auto x = mCb.lock();
+
+    if (x) {
+        return x->write(node, buf, size, offset);
+    }
+
+    return -1;
+}
