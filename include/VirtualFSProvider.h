@@ -69,6 +69,7 @@ public:
               size_t size,
               uint64_t offset);
 
+    int write(std::string node, const char *buf, size_t size, uint64_t offset);
 private:
     std::weak_ptr<streamfs::PluginInterface> mCb;
     std::mutex mFileListLock;

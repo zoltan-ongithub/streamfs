@@ -181,7 +181,7 @@ int SamplePlugin::read(std::string path, char *buf, size_t size, uint64_t offset
     static int i = 0;
 
     if (read_offset_c%20 == 0 ) {
-        printf("Reading offset %d size %d\n", offset, size);
+        printf("Reading offset %lu size%zud\n", offset, size);
     }
 
     read_offset_c++;
@@ -197,6 +197,10 @@ int SamplePlugin::read(std::string path, char *buf, size_t size, uint64_t offset
 
 void SamplePlugin::newBufferNotify(buffer_chunk &buffer) {
 
+}
+
+int SamplePlugin::write(std::string node, const char *buf, size_t size, uint64_t offset) {
+    return 0;
 }
 
 }

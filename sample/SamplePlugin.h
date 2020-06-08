@@ -34,6 +34,8 @@ public:
 
     int read(std::string path, char *buf, size_t size, uint64_t offset) override;
 
+    int write(std::string node, const char *buf, size_t size, uint64_t offset) override;
+
 private:
     std::weak_ptr<streamfs::PluginCallbackInterface> mCb;
     PluginConfig mConfig{};
