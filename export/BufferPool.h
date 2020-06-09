@@ -40,6 +40,7 @@ public:
             std::shared_ptr<BufferProducer<T>> producer,
             std::shared_ptr<BufferConsumer<T>> consumer,
             uint64_t preallocBufSize):
+            mLastReadLocation(0),
             mReadEnd(0),
             mProducer(producer),
             mConsumer(consumer),
@@ -61,6 +62,11 @@ public:
      * Clear buffer. Can be called only from the consumer thread
      */
     virtual void clear();
+
+    /**
+     * Clear buffer until the last read
+     */
+    virtual void clearToLastRead();
 
     /**
      * Get circular buffer maximum capacity
@@ -97,6 +103,7 @@ private:
     boost::mutex m_w_mutex;
 
     boost::condition mNotEnoughBytes;
+    uint64_t mLastReadLocation;
     void lockWaitForRead();
     uint64_t mReadEnd;
     bool  mGotLastBuffer;

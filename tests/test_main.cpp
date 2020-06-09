@@ -137,6 +137,33 @@ static int buffer_is_empty(char *buf, size_t size)
     return res;
 }
 
+TEST_F(BufferPoolTest, ClearBufferEnd) {
+    buffer_chunk chunk1, chunk2;
+    int LAST_BUFFER_SIZE = 20;
+
+    memset(chunk1.data(), 8, chunk1.size());
+    /* Queue 2 times the first buffer */
+    producer->queueBuffer(chunk1);
+    producer->queueBuffer(chunk1);
+
+    memset(chunk2.data(), 9, chunk2.size());
+
+    char outputBytes[chunk1.size()];
+    memset(outputBytes, 0, chunk1.size());
+
+    int result = pool->read( outputBytes, 1, 0, 0, 0);
+
+    ASSERT_EQ(memcmp(outputBytes, (const void*) chunk1.data(), chunk1.size()), 0 );
+
+    pool->clearToLastRead();
+
+    producer->queueBuffer(chunk2);;
+    result = pool->read( outputBytes, 1, 1, 0, 0);
+    ASSERT_EQ(memcmp(outputBytes, (const void*) chunk2.data(), chunk2.size()), 0 );
+
+}
+
+
 TEST_F(BufferPoolTest, ReadMultipleNonAlligned) {
     buffer_chunk chunk1, chunk2;
     int LAST_BUFFER_SIZE = 20;
@@ -159,7 +186,7 @@ TEST_F(BufferPoolTest, ReadMultipleNonAlligned) {
     ASSERT_EQ(memcmp(&outputBytes[chunk1.size()], (const void*) chunk2.data(), LAST_BUFFER_SIZE), 0 );
 
     ASSERT_EQ(buffer_is_empty(&outputBytes[chunk1.size() + LAST_BUFFER_SIZE],
-             chunk2.size() - LAST_BUFFER_SIZE), 0);
+                              chunk2.size() - LAST_BUFFER_SIZE), 0);
 }
 
 TEST_F(BufferPoolTest, LockUntilBufferAvailable) {
@@ -244,7 +271,6 @@ TEST_F(BufferPoolTest, ReadOverWriteBuffer) {
     ASSERT_EQ(result, 1 * BUFFER_CHUNK_SIZE);
 
     ASSERT_EQ(memcmp(outputBytes, (const void*) chunk2.data(), chunk2.size()), 0 );
-
     std::for_each(workers.begin(), workers.end(), [](std::thread &t)
     {
         t.join();

@@ -21,11 +21,9 @@ size_t BufferPool<buffer_chunk>::read(
 {
     boost::mutex::scoped_lock lock(m_mutex);
     auto capacity = mCircBuf.capacity();
-
     auto readEnd = offset + length;
 
     if ( (mGotLastBuffer &&  offset >= mTotalBufCount)  ) {
-
         // producer closed the data stream.
         return 0;
     }
@@ -81,7 +79,7 @@ size_t BufferPool<buffer_chunk>::read(
 
             auto endPos = std::min(mCircBuf.size(), capacity);
             auto startPos = endPos - (mTotalBufCount - offset) + i;
-
+            mLastReadLocation = startPos;
             memcpy(bufferChunks + off,
                        mCircBuf[startPos].data() + leftSkip,
                        lastItemCopySize);
@@ -133,4 +131,18 @@ void BufferPool<buffer_chunk>::pushBuffer(buffer_chunk& buffer, bool lastBuffer,
 template<typename T>
 void BufferPool<T>::lockWaitForRead() {
 
+}
+
+template<>
+void BufferPool<buffer_chunk>::clearToLastRead() {
+    boost::mutex::scoped_lock lock(m_mutex);
+    boost::mutex::scoped_lock lockWrite(m_w_mutex);
+
+    if (mCircBuf.empty())
+        return;
+
+    auto numElements = mCircBuf.size();
+    auto eraseCount = numElements - mLastReadLocation - 1;
+    mCircBuf.erase_end(eraseCount);
+    mTotalBufCount -= eraseCount;
 }
