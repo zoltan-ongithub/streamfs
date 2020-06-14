@@ -22,9 +22,7 @@ int main(int argc, char *argv[])
 {
     assert(pluginManager.loadPlugins(config) == 0);
     pluginManager.initPlugins();
-
     fuse_operations o  = IFuse::getInstance().getFuseOperations();
-
     return fuse_main(argc, argv, &o, NULL);
 }
 

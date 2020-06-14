@@ -17,6 +17,10 @@ namespace streamfs {
  * Plugin manager for dynamically loaded stream plugins
  */
 class StreamPluginManager {
+    /**
+     * Plugin state includes the plugin interface the virtual FS
+     * provided and the load path of the plugin.
+     */
     struct PluginState {
         std::shared_ptr<streamfs::PluginInterface> interface;
         std::shared_ptr<VirtualFSProvider> provider;
@@ -34,7 +38,25 @@ public:
 
     explicit StreamPluginManager();
 
+    /***
+     * Initialise plugins
+     */
     void initPlugins();
+
+    /**
+     * Return plugin state for a give plugin.
+     *
+     * @param pluginId
+     * @return pointer to plugin state. Returns null pointer if plugin not loaded
+     */
+    std::shared_ptr<PluginState> getPluginState(std::string pluginId) {
+        auto res = mPlugins.find(pluginId);
+
+        if (res == mPlugins.end())
+            return nullptr;
+
+        return res->second;
+    }
 
 private:
     std::map<std::string, std::shared_ptr<PluginState>> mPlugins;
