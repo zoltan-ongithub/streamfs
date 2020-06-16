@@ -201,6 +201,8 @@ int IFuse::writeFileCallback(
         size_t bufSize,
         off_t offset,
         struct fuse_file_info *) {
+
+
     auto provider = findProvider(path);
     auto node = findNode(provider, path);
 
@@ -209,9 +211,7 @@ int IFuse::writeFileCallback(
         return bufSize;
     }
 
-    provider->write(path, buf, bufSize, offset);
-
-    return provider->write(path, buf, bufSize, offset);
+    return provider->write(node.c_str(), buf, bufSize, offset);
 }
 
 int IFuse::truncate(const char *path, off_t lenght) {
