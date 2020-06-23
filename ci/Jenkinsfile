@@ -20,7 +20,6 @@ pipeline {
                     '''
                 }
             }
-        }               
         stage('Test') {        	
            	steps {
            		sh label: '', script: '''#!/bin/bash
@@ -36,9 +35,4 @@ pipeline {
             }
         }
     }
-    
-    post {
-        always {
-        }
-    }    
 }
