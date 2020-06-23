@@ -1,0 +1,44 @@
+pipeline {
+    agent { 
+        dockerfile {
+            filename 'Dockerfile'
+            dir 'ci'
+        }
+    }
+    stages {
+        stage('build') {        	
+            steps {
+                    sh label: '', script: '''#!/bin/bash
+                        echo \'############################################\'
+                        echo \'Building StreamFS\'
+                        echo \'############################################\'
+
+                        mkdir build
+                        cd build
+                        cmake ../
+                        make install
+                    '''
+                }
+            }
+        }               
+        stage('Test') {        	
+           	steps {
+           		sh label: '', script: '''#!/bin/bash
+            		
+           		echo '************************************'
+				echo "Running Unit tests"
+    			echo '************************************'
+
+                cd build/tests
+                ./unit_tests
+
+            	'''
+            }
+        }
+    }
+    
+    post {
+        always {
+        }
+    }    
+}
