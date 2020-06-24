@@ -19,6 +19,9 @@ size_t BufferPool<buffer_chunk>::read(
         size_t left_padding,
         size_t right_padding)
 {
+    if (exitPending)
+        return 0;
+
     boost::mutex::scoped_lock lock(m_mutex);
     auto capacity = mCircBuf.capacity();
     auto readEnd = offset + length;
@@ -113,6 +116,9 @@ void BufferPool<buffer_chunk>::clear()
 
 template <>
 void BufferPool<buffer_chunk>::pushBuffer(buffer_chunk& buffer, bool lastBuffer, size_t lastBufferSize) {
+    if (exitPending)
+        return;
+
     boost::mutex::scoped_lock lock(m_w_mutex);
 
     {

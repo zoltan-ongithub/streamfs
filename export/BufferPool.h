@@ -86,6 +86,10 @@ public:
 
     ~BufferPool() {
         mProducer->stop();
+        exitPending = true;
+        {
+            boost::mutex::scoped_lock lock(m_w_mutex);
+        }
     }
 
 private:
@@ -108,6 +112,7 @@ private:
     uint64_t mReadEnd;
     bool  mGotLastBuffer;
     size_t mLastBufferSize;
+    bool exitPending = false;
 };
 
 
