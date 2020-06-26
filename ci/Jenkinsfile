@@ -6,6 +6,12 @@ pipeline {
         }
     }
     stages {
+        stage('checkout gerrit patchset') {
+            steps{
+                echo "gerrit branch: ${GERRIT_BRANCH}, gerrit refspec: ${GERRIT_REFSPEC}"
+                checkout([$class: 'GitSCM', branches: [[name: "$GERRIT_PATCHSET_REVISION"]], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'sm_gerrit', refspec: "${GERRIT_REFSPEC}", url: 'https://gerrit.rdk.tvlab.cloud/a/tdc/streamfs']]])
+            }
+        }
         stage('build') {        	
             steps {
                     sh label: '', script: '''#!/bin/bash
