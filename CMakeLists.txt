@@ -91,9 +91,19 @@ add_library(sampleplugin SHARED
         sample/SamplePlugin.cpp
         export/FileInterface.h)
 
+add_library(httpstreamcontrol SHARED
+        sample/HttpStreamControlPlugin.cpp
+        export/FileInterface.h)
+
 add_dependencies(streamlink sampleplugin)
 
 target_link_libraries (sampleplugin
+        ${Boost_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
+        ${CURL_LIBRARIES}
+        glog)
+
+target_link_libraries (httpstreamcontrol
         ${Boost_LIBRARIES}
         ${CMAKE_THREAD_LIBS_INIT}
         ${CURL_LIBRARIES}
@@ -146,5 +156,9 @@ install (TARGETS streamfs
          RUNTIME DESTINATION bin)
 
 INSTALL(TARGETS sampleplugin
+        LIBRARY DESTINATION lib/streamfs/
+        )
+
+INSTALL(TARGETS httpstreamcontrol
         LIBRARY DESTINATION lib/streamfs/
         )
