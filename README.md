@@ -27,3 +27,15 @@ cmake ../
 sudo make install
 sudo ldconfig
 ```
+
+## Known issues
+
+* Mounted folder can persist after streamfs is killed;
+
+```
+$ fusermount -u temp
+```
+or
+```
+sudo umount temp/
+```
