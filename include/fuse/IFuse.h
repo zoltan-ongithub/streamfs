@@ -11,7 +11,7 @@ extern "C" {
 }
 #include <string>
 #include <map>
-#include <VirtualFSProvider.h>
+#include <streamfs/VirtualFSProvider.h>
 
 class IFuse : public FileInterface {
 

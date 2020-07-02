@@ -9,7 +9,7 @@
 #include <string>
 #include "PluginManagerConfig.h"
 #include "PluginImpl.h"
-#include "PluginInterface.h"
+#include "streamfs/PluginInterface.h"
 
 namespace streamfs {
 

@@ -7,8 +7,8 @@
 
 #include <vector>
 #include <mutex>
-#include "PluginConfig.h"
-#include "PluginCallbackInterface.h"
+#include "streamfs/PluginConfig.h"
+#include "streamfs/PluginCallbackInterface.h"
 
 namespace streamfs {
 

@@ -4,7 +4,7 @@
 
 #include <thread>
 #include <glog/logging.h>
-#include "PluginService.h"
+#include "streamfs/PluginService.h"
 
 namespace  streamfs {
 

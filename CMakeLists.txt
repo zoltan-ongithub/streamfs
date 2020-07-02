@@ -2,11 +2,12 @@ cmake_minimum_required(VERSION 3.10)
 project(streamlink)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set( CMAKE_VERBOSE_MAKEFILE on )
 
 include(CheckFileOffsetBits)
+
 CHECK_FILE_OFFSET_BITS()
 # fuse defines
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
@@ -14,18 +15,18 @@ ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 find_package (Threads)
 
 set(PUBLIC_HEADERS
-    export/BufferConsumer.h
-    export/BufferPool.h
-    export/BufferProducer.h
-    export/ByteBufferPool.h
-    export/config.h
-    export/FileInterface.h
-    export/MessageQueue.h
-    export/PluginCallbackInterface.h
-    export/PluginConfig.h
-    export/PluginInterface.h
-    export/PluginService.h
-    export/ServiceRequest.h
+        export/streamfs/BufferConsumer.h
+        export/streamfs/BufferPool.h
+        export/streamfs/BufferProducer.h
+        export/streamfs/ByteBufferPool.h
+        export/streamfs/config.h
+        export/streamfs/FileInterface.h
+        export/streamfs/MessageQueue.h
+        export/streamfs/PluginCallbackInterface.h
+        export/streamfs/PluginConfig.h
+        export/streamfs/PluginInterface.h
+        export/streamfs/PluginService.h
+        export/streamfs/ServiceRequest.h
 )
 
 include_directories(
@@ -35,10 +36,10 @@ include_directories(
         )
 
 add_library(buqu SHARED
-        src/BufferPool.cpp export/BufferPool.h
+        src/BufferPool.cpp export/streamfs/BufferPool.h
         src/BufferProducer.cpp
         src/BufferPool.cpp
-        export/BufferProducer.h
+        export/streamfs/BufferProducer.h
         src/BufferConsumer.cpp
         src/ByteBufferPool.cpp
 )
@@ -51,21 +52,21 @@ add_library(streamlink SHARED
         src/StreamPluginManager.cpp
         src/StreamManager.cpp
         src/Stream.cpp
-        src/MemAllocator.cpp include/MemAllocator.h
-        src/ActiveBuffer.cpp include/ActiveBuffer.h
-        src/BufferPool.cpp export/BufferPool.h
+        src/MemAllocator.cpp include/streamfs/MemAllocator.h
+        src/ActiveBuffer.cpp include/streamfs/ActiveBuffer.h
+        src/BufferPool.cpp export/streamfs/BufferPool.h
         src/BufferProducer.cpp
         src/BufferPool.cpp
-        export/BufferProducer.h
+        export/streamfs/BufferProducer.h
         src/BufferConsumer.cpp
         src/ByteBufferPool.cpp
-        include/VirtualFSProvider.cpp
-        include/VirtualFSProvider.h
+        include/streamfs/VirtualFSProvider.cpp
+        include/streamfs/VirtualFSProvider.h
         src/fuse/IFuse.cpp
         include/fuse/IFuse.h
-        export/BufferConsumer.h
+        export/streamfs/BufferConsumer.h
         src/PluginCbImpl.cpp
-        include/PluginCbImpl.h
+        include/streamfs/PluginCbImpl.h
 
         )
 
@@ -89,7 +90,7 @@ include_directories( ${Boost_INCLUDE_DIRS} )
 
 add_library(sampleplugin SHARED
         sample/SamplePlugin.cpp
-        export/FileInterface.h)
+        export/streamfs/FileInterface.h)
 
 add_dependencies(streamlink sampleplugin)
 
@@ -116,9 +117,9 @@ target_link_libraries (streamlink
 
 
 add_executable(streamfs main.cpp
-        export/MessageQueue.h
+        export/streamfs/MessageQueue.h
         src/PluginService.cpp
-        export/PluginService.h
+        export/streamfs/PluginService.h
         )
 
 target_link_libraries (streamfs
@@ -148,3 +149,7 @@ install (TARGETS streamfs
 INSTALL(TARGETS sampleplugin
         LIBRARY DESTINATION lib/streamfs/
         )
+
+set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/export
+        CACHE INTERNAL "${PROJECT_NAME}: Include Directories" FORCE)

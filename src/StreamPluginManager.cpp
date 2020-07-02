@@ -3,15 +3,15 @@
 //
 
 
-#include "StreamPluginManager.h"
-#include "PluginCbImpl.h"
-#include "PluginCallbackInterface.h"
+#include "streamfs/StreamPluginManager.h"
+#include "streamfs/PluginCbImpl.h"
+#include "streamfs/PluginCallbackInterface.h"
 #include <boost/filesystem.hpp>
 #include <set>
 #include <dlfcn.h>
 #include <glog/logging.h>
-#include <PluginInterface.h>
-#include <VirtualFSProvider.h>
+#include <streamfs/PluginInterface.h>
+#include <streamfs/VirtualFSProvider.h>
 #include <fuse/IFuse.h>
 
 namespace fs = boost::filesystem;

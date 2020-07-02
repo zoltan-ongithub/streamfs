@@ -2,8 +2,8 @@
 // Created by Zoltan Kuscsik on 4/21/20.
 //
 
-#include <BufferProducer.h>
-#include <ByteBufferPool.h>
+#include <streamfs/BufferProducer.h>
+#include <streamfs/ByteBufferPool.h>
 #include <thread>
 #include <stdlib.h>
 #include "test_main.h"

@@ -2,7 +2,7 @@
 // Created by Zoltan Kuscsik on 4/17/20.
 //
 
-#include "StreamManager.h"
+#include "streamfs/StreamManager.h"
 
 namespace streamfs {
 

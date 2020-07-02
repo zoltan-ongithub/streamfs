@@ -4,7 +4,7 @@
 
 #ifndef STREAMLINK_FILEINTERFACE_H
 #define STREAMLINK_FILEINTERFACE_H
-#include <VirtualFSProvider.h>
+#include <streamfs/VirtualFSProvider.h>
 
 class VirtualFSProvider;
 

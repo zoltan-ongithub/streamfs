@@ -5,7 +5,7 @@
 #include <cstring>
 #include <memory>
 #include <curl/curl.h>
-#include "ByteBufferPool.h"
+#include "streamfs/ByteBufferPool.h"
 #include "SamplePlugin.h"
 #include <algorithm>
 

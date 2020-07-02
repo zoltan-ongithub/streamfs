@@ -11,8 +11,8 @@
 #include <memory>
 #include <glog/logging.h>
 #include <mutex>
-#include <FileInterface.h>
-#include "PluginInterface.h"
+#include <streamfs/FileInterface.h>
+#include "streamfs/PluginInterface.h"
 #include "PluginCbImpl.h"
 
 enum NodeTypes {

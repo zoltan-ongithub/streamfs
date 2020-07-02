@@ -2,7 +2,7 @@
 // Created by Zoltan Kuscsik on 4/26/20.
 //
 
-#include "PluginCbImpl.h"
+#include "streamfs/PluginCbImpl.h"
 
 namespace streamfs {
 

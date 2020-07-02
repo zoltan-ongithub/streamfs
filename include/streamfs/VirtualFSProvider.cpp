@@ -4,8 +4,8 @@
 
 #include "VirtualFSProvider.h"
 //#include "PluginCbImpl.h"
-#include "PluginCallbackInterface.h"
-#include "PluginInterface.h"
+#include "streamfs/PluginCallbackInterface.h"
+#include "streamfs/PluginInterface.h"
 
 std::vector<VirtualFSProvider::FileNode> VirtualFSProvider::getNodes() {
     std::lock_guard<std::mutex> mLock(mFileListLock);

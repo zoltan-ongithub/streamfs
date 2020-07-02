@@ -2,8 +2,8 @@
 // Created by Zoltan Kuscsik on 4/20/20.
 //
 
-#include <BufferPool.h>
-#include "BufferProducer.h"
+#include <streamfs/BufferPool.h>
+#include "streamfs/BufferProducer.h"
 
 
 template <>

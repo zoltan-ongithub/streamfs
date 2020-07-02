@@ -4,7 +4,7 @@
 
 #include <iostream>
 #include <glog/logging.h>
-#include "BufferPool.h"
+#include "streamfs/BufferPool.h"
 #include <boost/bind.hpp>
 #include <cstring>
 #include <algorithm>    // std::max

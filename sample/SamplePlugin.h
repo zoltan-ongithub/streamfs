@@ -5,13 +5,13 @@
 #ifndef STREAMFS_SAMPLEPLUGIN_H
 #define STREAMFS_SAMPLEPLUGIN_H
 
-#include <PluginInterface.h>
+#include <streamfs/PluginInterface.h>
 #include <memory>
 #include <string>
 #include <utility>
-#include <BufferConsumer.h>
-#include <ByteBufferPool.h>
-#include "PluginCallbackInterface.h"
+#include <streamfs/BufferConsumer.h>
+#include <streamfs/ByteBufferPool.h>
+#include "streamfs/PluginCallbackInterface.h"
 
 namespace streamfs {
 
