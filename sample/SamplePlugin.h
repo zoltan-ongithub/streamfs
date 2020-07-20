@@ -2,8 +2,7 @@
 // Created by Zoltan Kuscsik on 4/17/20.
 //
 
-#ifndef STREAMFS_SAMPLEPLUGIN_H
-#define STREAMFS_SAMPLEPLUGIN_H
+#pragma once
 
 #include <streamfs/PluginInterface.h>
 #include <memory>
@@ -47,9 +46,12 @@ private:
 }
 
 extern "C" {
-streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface* cb) {
+streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface *cb) {
     return new streamfs::SamplePlugin(cb);
 }
+
+const char *GET_STREAMFS_PLUGIN_ID() {
+    return "sample_plugin";
 }
 
-#endif //STREAMFS_SAMPLEPLUGIN_H
+}

@@ -18,7 +18,7 @@
 namespace streamfs {
 class PluginService;
 
-#define STREAMFS_INTERFACE_VERSION 1
+#define STREAMFS_INTERFACE_VERSION 2
 
 /**
  * Generic plugin interface for 3rd party plugins
@@ -66,5 +66,9 @@ public:
 extern "C" {
 // Implement function in plugin to create a new plugin interface
 streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface* cb);
+
+// Implement function to return streamfs ID
+const char *GET_STREAMFS_PLUGIN_ID();
+
 }
 #endif //STREAMFS_PLUGININTERFACE_H

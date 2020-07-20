@@ -49,7 +49,8 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
             continue;
         }
 
-        void* pluginLoad =  (streamfs::PluginInterface*) dlsym(hndl, "INIT_STREAMFS_PLUGIN");
+        void* pluginLoad =  (void*) dlsym(hndl, "INIT_STREAMFS_PLUGIN");
+
 
         if (pluginLoad == nullptr) {
             LOG(INFO) << "Ignoring .so file " << soFile << ".  Missing INIT_STREAMFS_PLUGIN implementation.";
@@ -58,11 +59,31 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
             continue;
         }
 
-        typedef streamfs::PluginInterface*(*create_fn)(PluginCallbackInterface*);
+       void* getPluginIdF =  (void*) dlsym(hndl, "GET_STREAMFS_PLUGIN_ID");
+
+        if (getPluginIdF == nullptr) {
+            LOG(INFO) << "Ignoring .so file " << soFile << ".  Missing GET_STREAMFS_PLUGIN_ID implementation.";
+            LOG(INFO) << " dlerror:" << dlerror();
+            dlclose(hndl);
+            continue;
+        }
 
         create_fn creator = nullptr;
         *reinterpret_cast<void**>(&creator) = pluginLoad;
 
+        get_id_fn get_id_call = nullptr;
+
+        *reinterpret_cast<void**>(&get_id_call) = getPluginIdF;
+
+        const char* pluginIdTmp = get_id_call();
+
+        if (pluginIdTmp == nullptr || mPlugins.find(pluginIdTmp) != mPlugins.end()) {
+
+                LOG(WARNING) << "Ignoring duplicate plugin. Plugin " << pluginIdTmp << " path: " << soFile <<
+                             " already loaded";
+                dlclose(hndl);
+                continue;
+        }
 
         auto* pin(new streamfs::PluginCbImpl());
         auto* cb = dynamic_cast<PluginCallbackInterface*>(pin);
@@ -76,16 +97,6 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
             continue;
         }
 
-        // Check if plugin already loaded from different directory
-        {
-            auto tempPlugin = mPlugins.find(plugin->getId());
-
-            if (tempPlugin != mPlugins.end()) {
-                LOG(WARNING) << "Ignoring duplicate plugin. Plugin " << plugin->getId() << " path: " << soFile <<
-                           " already loaded from " << tempPlugin->second->libraryPath;
-                continue;
-            }
-        }
 
         pluginState->interface = plugin;
         auto& fsProvider = IFuse::getInstance();

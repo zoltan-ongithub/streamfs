@@ -17,6 +17,9 @@ namespace streamfs {
  * Plugin manager for dynamically loaded stream plugins
  */
 class StreamPluginManager {
+    typedef streamfs::PluginInterface*(*create_fn)(PluginCallbackInterface*);
+    typedef const char * (*get_id_fn)();
+
     /**
      * Plugin state includes the plugin interface the virtual FS
      * provided and the load path of the plugin.
