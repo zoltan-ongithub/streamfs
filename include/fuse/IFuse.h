@@ -12,12 +12,21 @@ extern "C" {
 #include <string>
 #include <map>
 #include <streamfs/VirtualFSProvider.h>
+#include <map>
+
 
 class IFuse : public FileInterface {
 
 protected:
     ~IFuse() = default;
 public:
+    typedef std::string plugin_id;
+    typedef std::string path_id;
+
+    typedef std::pair<plugin_id , path_id> plugin_file_pair_t;
+    typedef std::map<plugin_file_pair_t, struct fuse_pollhandle* > pollHandleMapType;
+
+
     static IFuse& getInstance()
     {
         static IFuse instance;
@@ -32,6 +41,8 @@ public:
     typedef  std::map<std::string, VirtualFSProvider*> fsProviderMapType;
 
     fuse_operations getFuseOperations();
+
+    static void notifyPoll(IFuse::plugin_id provider, IFuse::path_id filename);
 
 private:
     IFuse();
@@ -60,6 +71,13 @@ private:
 
 
     static VirtualFSProvider *findProvider(const char* path);
+
+    static int poll(const char *, fuse_file_info *, fuse_pollhandle *, unsigned int *);
+
+private:
+    typedef struct fuse_pollhandle* pollHandleType;
+
+    static void registerPoll(std::string filename, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph);
 };
 
 

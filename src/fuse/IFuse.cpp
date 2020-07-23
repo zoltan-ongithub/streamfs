@@ -6,9 +6,16 @@
 #include "fuse/IFuse.h"
 #include <boost/filesystem.hpp>
 #include <string>
+#include <poll.h>
+
 #define fs boost::filesystem
 
+static std::mutex mPollConfigMtx;
+
+static IFuse::pollHandleMapType mPollHandles;
 IFuse::fsProviderMapType IFuse::fsProviders;
+
+static struct fuse *g_fsel_fuse;
 
 IFuse::IFuse(){
 }
@@ -22,6 +29,7 @@ fuse_operations IFuse::getFuseOperations() {
 	fop.readdir = IFuse::readDirCallback;
 	fop.write = IFuse::writeFileCallback;
 	fop.truncate = IFuse::truncate;
+	fop.poll = IFuse::poll;
 	return fop;
     }();
   return ops;
@@ -216,4 +224,54 @@ int IFuse::writeFileCallback(
 
 int IFuse::truncate(const char *path, off_t lenght) {
     return 0;
+}
+
+int IFuse::poll(const char *path, struct fuse_file_info *fi,
+                struct fuse_pollhandle *ph, unsigned *reventsp) {
+
+    auto provider = findProvider(path);
+    auto node = findNode(provider, path);
+
+    if (node.empty()) {
+        LOG(INFO) << "Could not find node " << path;
+        return 0;
+    }
+
+    std::lock_guard<std::mutex> lockGuard(mPollConfigMtx);
+
+    if (!g_fsel_fuse) {
+        struct fuse_context *cxt = fuse_get_context();
+        if (cxt)
+            g_fsel_fuse = cxt->fuse;
+    }
+
+    registerPoll(node, provider, ph);
+
+    return 0;
+}
+
+void IFuse::registerPoll(std::string fileName, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph)
+{
+    auto id = std::make_pair(pProvider->getName(), fileName);
+    auto handle = mPollHandles.find(id);
+
+    if (mPollHandles.find(id) != mPollHandles.end()) {
+        fuse_pollhandle_destroy(handle->second);
+    }
+
+    auto phPair = std::make_pair(id, ph);
+    mPollHandles.insert(phPair);
+}
+
+void IFuse::notifyPoll(IFuse::plugin_id provider,
+                       IFuse::path_id filename) {
+    std::lock_guard<std::mutex> lockGuard(mPollConfigMtx);
+    auto id = std::make_pair(provider, filename);
+    auto handle = mPollHandles.find(id);
+    if (mPollHandles.find(id) != mPollHandles.end()) {
+        auto res = fuse_notify_poll(handle->second);
+        fuse_pollhandle_destroy(handle->second);
+        mPollHandles.erase(id);
+    }
+
 }

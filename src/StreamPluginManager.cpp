@@ -85,10 +85,11 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
                 continue;
         }
 
-        auto* pin(new streamfs::PluginCbImpl());
-        auto* cb = dynamic_cast<PluginCallbackInterface*>(pin);
-
         std::shared_ptr<PluginState> pluginState(new PluginState());
+
+        auto* pin(new streamfs::PluginCbImpl(pluginIdTmp));
+
+        auto* cb = dynamic_cast<PluginCallbackInterface*>(pin);
         std::shared_ptr<streamfs::PluginInterface>  plugin(creator(cb));
 
         if (plugin == nullptr) {
@@ -97,12 +98,14 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
             continue;
         }
 
-
         pluginState->interface = plugin;
         auto& fsProvider = IFuse::getInstance();
 
-        std::shared_ptr<VirtualFSProvider> provider(new VirtualFSProvider(plugin->getId(),
-                plugin, fsProvider, true));
+        std::shared_ptr<VirtualFSProvider> provider(
+                new VirtualFSProvider(plugin->getId(),
+                    plugin, fsProvider, true));
+
+        pin->registerCallbackHandler(provider.get());
 
         pluginState->interface =  std::shared_ptr<streamfs::PluginInterface>(plugin);
         pluginState->provider = provider;

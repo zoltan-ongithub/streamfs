@@ -23,4 +23,9 @@ std::vector<std::string> PluginCbImpl::getAvailableStreams() {
     return mStreamIds;
 }
 
+void PluginCbImpl::notifyUpdate(std::string path) {
+    std::lock_guard<std::mutex> lock(guard);
+    mCBHandler->notifyUpdate(mId, path);
+}
+
 }

@@ -1,10 +1,6 @@
-//
-// Created by Zoltan Kuscsik on 4/28/20.
-//
-
-#ifndef STREAMLINK_PLUGINCALLBACKINTERFACE_H
-#define STREAMLINK_PLUGINCALLBACKINTERFACE_H
-
+#pragma once
+#include <vector>
+#include <string>
 #include "PluginConfig.h"
 namespace streamfs {
 class PluginCallbackInterface {
@@ -15,8 +11,12 @@ public:
 
     virtual std::vector<std::string>  getAvailableStreams() = 0;
 
+    /**
+     * Notify file changed (used in poll)
+     * @param path
+     */
+    virtual void notifyUpdate(std::string path) = 0;
+
     virtual ~PluginCallbackInterface() = default;
 };
 }
-
-#endif //STREAMLINK_PLUGINCALLBACKINTERFACE_H

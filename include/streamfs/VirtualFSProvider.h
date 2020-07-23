@@ -61,6 +61,8 @@ public:
         return 0;
     }
 
+    void notifyUpdate(std::string module, std::string path);
+
     std::vector<FileNode> getNodes();
 
     int open(std::string node);
@@ -76,7 +78,6 @@ private:
     std::string mName;
     std::set<std::unique_ptr<VirtualFSProvider>> mSubProviders;
     FileInterface& mFileInteface;
-    std::shared_ptr<streamfs::PluginCbImpl> mPluginInterface;
     bool mIsPluginHandler;
 };
 

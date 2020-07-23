@@ -2,6 +2,7 @@
 // Created by Zoltan Kuscsik on 4/24/20.
 //
 
+#include <fuse/IFuse.h>
 #include "VirtualFSProvider.h"
 //#include "PluginCbImpl.h"
 #include "streamfs/PluginCallbackInterface.h"
@@ -47,7 +48,6 @@ VirtualFSProvider::VirtualFSProvider(const std::string &name, std::weak_ptr<stre
                                      FileInterface &fileInterface, bool isPlugin)
         : mName(name), mCb(cb),
                                        mFileInteface(fileInterface),
-                                       mPluginInterface(nullptr),
                                        mIsPluginHandler(isPlugin) {
     if (name.empty()) {
         LOG(ERROR) << "Directory name can not be empty";
@@ -92,4 +92,8 @@ int VirtualFSProvider::write(std::string node, const char *buf, size_t size, uin
     }
 
     return -1;
+}
+
+void VirtualFSProvider::notifyUpdate(std::string module, std::string path) {
+    IFuse::notifyPoll(module, path);
 }
