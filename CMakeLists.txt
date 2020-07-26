@@ -60,7 +60,7 @@ add_library(streamlink SHARED
         export/streamfs/BufferProducer.h
         src/BufferConsumer.cpp
         src/ByteBufferPool.cpp
-        include/streamfs/VirtualFSProvider.cpp
+        src/VirtualFSProvider.cpp
         include/streamfs/VirtualFSProvider.h
         src/fuse/IFuse.cpp
         include/fuse/IFuse.h
