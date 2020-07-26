@@ -14,26 +14,26 @@ static std::mutex mPollConfigMtx;
 
 static IFuse::pollHandleMapType mPollHandles;
 IFuse::fsProviderMapType IFuse::fsProviders;
-static std::map<IFuse::ctx_id_t , bool> mEofReached;
+static std::map<IFuse::ctx_id_t, bool> mEofReached;
 
 static struct fuse *g_fsel_fuse;
 
-IFuse::IFuse(){
+IFuse::IFuse() {
 }
 
 fuse_operations IFuse::getFuseOperations() {
-    static fuse_operations ops = []{
+    static fuse_operations ops = [] {
         fuse_operations fop{};
         fop.getattr = IFuse::getAttrCallback;
-	fop.open = IFuse::openCallback;
-	fop.read = IFuse::readCallback;
-	fop.readdir = IFuse::readDirCallback;
-	fop.write = IFuse::writeFileCallback;
-	fop.truncate = IFuse::truncate;
-	fop.poll = IFuse::poll;
-	return fop;
+        fop.open = IFuse::openCallback;
+        fop.read = IFuse::readCallback;
+        fop.readdir = IFuse::readDirCallback;
+        fop.write = IFuse::writeFileCallback;
+        fop.truncate = IFuse::truncate;
+        fop.poll = IFuse::poll;
+        return fop;
     }();
-  return ops;
+    return ops;
 }
 
 int
@@ -59,17 +59,17 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
         return 0;
     }
 
-    if ( !pluginName.empty() && plugin != fsProviders.end() && it == p.end()){
+    if (!pluginName.empty() && plugin != fsProviders.end() && it == p.end()) {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
         return 0;
     } else {
         auto provider = findProvider(path);
 
-        if(provider != nullptr) {
+        if (provider != nullptr) {
             auto fsNodes = provider->getNodes();
-            for(auto node : fsNodes) {
-                if(node.name == it->string()){
+            for (auto node : fsNodes) {
+                if (node.name == it->string()) {
                     switch (node.type) {
                         case FILE_TYPE:
                             stbuf->st_nlink = 2;
@@ -88,17 +88,17 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
     return -ENOENT;
 }
 
- VirtualFSProvider* IFuse::findProvider(const char* path) {
-     fs::path p(path);
-     auto b = p.begin();
-     std::advance(b, 1);
-     auto provider = fsProviders.find(b->string());
+VirtualFSProvider *IFuse::findProvider(const char *path) {
+    fs::path p(path);
+    auto b = p.begin();
+    std::advance(b, 1);
+    auto provider = fsProviders.find(b->string());
 
-     if (provider !=  fsProviders.end()) {
-         return provider->second;
-     } else {
-         return nullptr;
-     }
+    if (provider != fsProviders.end()) {
+        return provider->second;
+    } else {
+        return nullptr;
+    }
 }
 
 int
@@ -118,14 +118,14 @@ IFuse::readDirCallback(
     filler(buf, "..", NULL, 0);
 
     if (strlen(path) == 1 && strncmp("/", path, 1) == 0) {
-        for(auto& provider : fsProviders) {
-                filler(buf, provider.first.c_str(), NULL, 0);
+        for (auto &provider : fsProviders) {
+            filler(buf, provider.first.c_str(), NULL, 0);
         }
-    }  else {
+    } else {
         auto provider = findProvider(path);
-        if(provider != nullptr) {
+        if (provider != nullptr) {
             auto fsNodes = provider->getNodes();
-            for(auto node : fsNodes) {
+            for (auto node : fsNodes) {
                 filler(buf, node.name.c_str(), NULL, 0);
             }
         }
@@ -133,15 +133,16 @@ IFuse::readDirCallback(
 
     return 0;
 }
-static std::string findNode(VirtualFSProvider* provider, const char* fusePath) {
+
+static std::string findNode(VirtualFSProvider *provider, const char *fusePath) {
     fs::path p(fusePath);
     auto b = p.begin();
     std::advance(b, 2);
-    if (provider != nullptr){
+    if (provider != nullptr) {
         auto fsNodes = provider->getNodes();
-        for(auto node : fsNodes) {
+        for (auto node : fsNodes) {
             // TODO: provider should be use hash based lookup
-            if(node.name == b->string()) {
+            if (node.name == b->string()) {
                 return node.name;
             }
         }
@@ -151,8 +152,8 @@ static std::string findNode(VirtualFSProvider* provider, const char* fusePath) {
 }
 
 int IFuse::openCallback(const char
-        *path,
-        struct fuse_file_info *fi) {
+                        *path,
+                        struct fuse_file_info *fi) {
 
     auto provider = findProvider(path);
     fs::path p(path);
@@ -161,14 +162,14 @@ int IFuse::openCallback(const char
     /**
      * TODO: add HASH based file name lookup.
      */
-    if (provider != nullptr){
+    if (provider != nullptr) {
         auto fsNodes = provider->getNodes();
 
-        for(auto node : fsNodes) {
-            if(node.name == b->string()) {
+        for (auto node : fsNodes) {
+            if (node.name == b->string()) {
                 return provider->open(node.name);
             }
-          }
+        }
     }
     return -ENOENT;
 }
@@ -183,10 +184,10 @@ int IFuse::readCallback(const char *path, char *buf, size_t size, off_t offset,
     /**
      * TODO: add HASH based file name lookup.
      */
-    if (provider != nullptr){
+    if (provider != nullptr) {
         auto fsNodes = provider->getNodes();
-        for(auto node : fsNodes) {
-            if(node.name == b->string()) {
+        for (auto node : fsNodes) {
+            if (node.name == b->string()) {
                 result = provider->read(node.name, buf, size, offset);
             }
         }
@@ -205,8 +206,8 @@ int IFuse::readCallback(const char *path, char *buf, size_t size, off_t offset,
     return result;
 }
 
-void IFuse::registerFsProvider(VirtualFSProvider* provider) {
-    auto p = std::make_pair<>(provider->getName(),  provider);
+void IFuse::registerFsProvider(VirtualFSProvider *provider) {
+    auto p = std::make_pair<>(provider->getName(), provider);
     fsProviders.insert(p);
 }
 
@@ -253,8 +254,8 @@ int IFuse::poll(const char *path, struct fuse_file_info *fi,
 }
 
 void
-IFuse::registerPoll(std::string fileName, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph, unsigned *reventsp)
-{
+IFuse::registerPoll(std::string fileName, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph,
+                    unsigned *reventsp) {
     std::lock_guard<std::mutex> lockGuard(mPollConfigMtx);
     auto id = getCbId(pProvider->getName(), fileName);
     auto handle = mPollHandles.find(id);
@@ -306,12 +307,12 @@ void IFuse::notifyPoll(IFuse::plugin_id provider,
 
     if (mPollHandles.find(id) != mPollHandles.end()) {
 
-        auto& ctxMap = handles->second;
+        auto &ctxMap = handles->second;
 
         //Notify all clients reached EOF
         auto ctxPairs = ctxMap.begin();
 
-        while(ctxPairs != ctxMap.end()) {
+        while (ctxPairs != ctxMap.end()) {
             auto ctx_id = ctxPairs->first;
             auto pHandle = ctxPairs->second;
             mEofReached[ctx_id] = false;

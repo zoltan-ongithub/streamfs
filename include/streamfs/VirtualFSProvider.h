@@ -32,23 +32,23 @@ class VirtualFSProvider {
     };
 
 public:
-    VirtualFSProvider(const std::string& name,
-            std::weak_ptr<streamfs::PluginInterface> cb,
-            FileInterface& fileInterface, bool isPlugin);
+    VirtualFSProvider(const std::string &name,
+                      std::weak_ptr<streamfs::PluginInterface> cb,
+                      FileInterface &fileInterface, bool isPlugin);
 
     ~VirtualFSProvider();
 
-    std::string getName() { return mName;}
+    std::string getName() { return mName; }
 
 
-    int attachProvider(VirtualFSProvider* provider) {
+    int attachProvider(VirtualFSProvider *provider) {
         if (provider == nullptr)
             return -1;
 
         auto inf = mCb.lock();
 
         if (!inf)
-            return  -1;
+            return -1;
 
         auto fileList = inf->getAvailableStreams();
 
@@ -61,23 +61,24 @@ public:
         return 0;
     }
 
-    void notifyUpdate(const std::string& module, const std::string &path);
+    void notifyUpdate(const std::string &module, const std::string &path);
 
     std::vector<FileNode> getNodes();
 
     int open(std::string node);
 
-    int read( std::string node, char *buf,
-              size_t size,
-              uint64_t offset);
+    int read(std::string node, char *buf,
+             size_t size,
+             uint64_t offset);
 
     int write(std::string node, const char *buf, size_t size, uint64_t offset);
+
 private:
     std::weak_ptr<streamfs::PluginInterface> mCb;
     std::mutex mFileListLock;
     std::string mName;
     std::set<std::unique_ptr<VirtualFSProvider>> mSubProviders;
-    FileInterface& mFileInteface;
+    FileInterface &mFileInteface;
     bool mIsPluginHandler;
 };
 

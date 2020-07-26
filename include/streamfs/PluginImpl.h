@@ -4,6 +4,7 @@
 
 #ifndef STREAMFS_PLUGINIMPL_H
 #define STREAMFS_PLUGINIMPL_H
+
 #include <string>
 
 namespace streamfs {

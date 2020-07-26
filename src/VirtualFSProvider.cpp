@@ -16,9 +16,9 @@ std::vector<VirtualFSProvider::FileNode> VirtualFSProvider::getNodes() {
     auto offset = 0;
 
     if (inf) {
-        auto& fileList = inf->getAvailableStreams();
+        auto &fileList = inf->getAvailableStreams();
         nodes.resize(fileList.size() + mSubProviders.size());
-        for( const auto &provider: fileList ){
+        for (const auto &provider: fileList) {
             nodes[offset].type = NodeTypes::FILE_TYPE;
             nodes[offset].provider = this;
             nodes[offset].name = provider;
@@ -28,8 +28,8 @@ std::vector<VirtualFSProvider::FileNode> VirtualFSProvider::getNodes() {
         nodes.resize(mSubProviders.size());
     }
 
-    for (const auto & mSubProvider : mSubProviders) {
-        nodes[offset].type = NodeTypes ::DIRECTORY_TYPE;
+    for (const auto &mSubProvider : mSubProviders) {
+        nodes[offset].type = NodeTypes::DIRECTORY_TYPE;
         nodes[offset].provider = mSubProvider.get();
         offset++;
     }
@@ -47,8 +47,8 @@ VirtualFSProvider::~VirtualFSProvider() {
 VirtualFSProvider::VirtualFSProvider(const std::string &name, std::weak_ptr<streamfs::PluginInterface> cb,
                                      FileInterface &fileInterface, bool isPlugin)
         : mName(name), mCb(cb),
-                                       mFileInteface(fileInterface),
-                                       mIsPluginHandler(isPlugin) {
+          mFileInteface(fileInterface),
+          mIsPluginHandler(isPlugin) {
     if (name.empty()) {
         LOG(ERROR) << "Directory name can not be empty";
         throw;
@@ -62,6 +62,7 @@ VirtualFSProvider::VirtualFSProvider(const std::string &name, std::weak_ptr<stre
         fileInterface.registerFsProvider(this);
     }
 }
+
 int VirtualFSProvider::read(std::string node,
                             char *buf,
                             size_t size,
@@ -74,6 +75,7 @@ int VirtualFSProvider::read(std::string node,
     return -ENOENT;
 
 }
+
 int VirtualFSProvider::open(std::string basicString) {
 
     auto x = mCb.lock();
@@ -94,6 +96,6 @@ int VirtualFSProvider::write(std::string node, const char *buf, size_t size, uin
     return -1;
 }
 
-void VirtualFSProvider::notifyUpdate(const std::string& module, const std::string& path) {
+void VirtualFSProvider::notifyUpdate(const std::string &module, const std::string &path) {
     IFuse::notifyPoll(module, path);
 }

@@ -16,17 +16,17 @@
 
 namespace fs = boost::filesystem;
 
-namespace  streamfs {
+namespace streamfs {
 
 StreamPluginManager::StreamPluginManager() = default;
 
-int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
+int StreamPluginManager::loadPlugins(const PluginManagerConfig &configuration) {
     std::lock_guard<std::mutex> lock(mPluginMtx);
     std::set<std::string> sharedLibs;
 
     mPlugins.clear();
 
-    for(auto dir: configuration.pluginDirectories) {
+    for (auto dir: configuration.pluginDirectories) {
         if (!fs::exists(dir)) {
             continue;
         }
@@ -38,18 +38,18 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
             }
         }
     }
-    for (const std::string& soFile : sharedLibs) {
+    for (const std::string &soFile : sharedLibs) {
         LOG(INFO) << "Loading plugin:" << soFile << "\n";
 
         void *hndl = dlopen(soFile.c_str(), RTLD_NOW);
 
-        if(hndl == nullptr){
+        if (hndl == nullptr) {
             LOG(INFO) << "Can't open shared library: " << soFile << " Ignoring plugin.";
-            LOG(INFO) << "   dlerror: " <<  dlerror();
+            LOG(INFO) << "   dlerror: " << dlerror();
             continue;
         }
 
-        void* pluginLoad =  (void*) dlsym(hndl, "INIT_STREAMFS_PLUGIN");
+        void *pluginLoad = (void *) dlsym(hndl, "INIT_STREAMFS_PLUGIN");
 
 
         if (pluginLoad == nullptr) {
@@ -59,7 +59,7 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
             continue;
         }
 
-       void* getPluginIdF =  (void*) dlsym(hndl, "GET_STREAMFS_PLUGIN_ID");
+        void *getPluginIdF = (void *) dlsym(hndl, "GET_STREAMFS_PLUGIN_ID");
 
         if (getPluginIdF == nullptr) {
             LOG(INFO) << "Ignoring .so file " << soFile << ".  Missing GET_STREAMFS_PLUGIN_ID implementation.";
@@ -69,28 +69,28 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
         }
 
         create_fn creator = nullptr;
-        *reinterpret_cast<void**>(&creator) = pluginLoad;
+        *reinterpret_cast<void **>(&creator) = pluginLoad;
 
         get_id_fn get_id_call = nullptr;
 
-        *reinterpret_cast<void**>(&get_id_call) = getPluginIdF;
+        *reinterpret_cast<void **>(&get_id_call) = getPluginIdF;
 
-        const char* pluginIdTmp = get_id_call();
+        const char *pluginIdTmp = get_id_call();
 
         if (pluginIdTmp == nullptr || mPlugins.find(pluginIdTmp) != mPlugins.end()) {
 
-                LOG(WARNING) << "Ignoring duplicate plugin. Plugin " << pluginIdTmp << " path: " << soFile <<
-                             " already loaded";
-                dlclose(hndl);
-                continue;
+            LOG(WARNING) << "Ignoring duplicate plugin. Plugin " << pluginIdTmp << " path: " << soFile <<
+                         " already loaded";
+            dlclose(hndl);
+            continue;
         }
 
         std::shared_ptr<PluginState> pluginState(new PluginState());
 
-        auto* pin(new streamfs::PluginCbImpl(pluginIdTmp));
+        auto *pin(new streamfs::PluginCbImpl(pluginIdTmp));
 
-        auto* cb = dynamic_cast<PluginCallbackInterface*>(pin);
-        std::shared_ptr<streamfs::PluginInterface>  plugin(creator(cb));
+        auto *cb = dynamic_cast<PluginCallbackInterface *>(pin);
+        std::shared_ptr<streamfs::PluginInterface> plugin(creator(cb));
 
         if (plugin == nullptr) {
             dlclose(hndl);
@@ -99,21 +99,21 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig& configuration) {
         }
 
         pluginState->interface = plugin;
-        auto& fsProvider = IFuse::getInstance();
+        auto &fsProvider = IFuse::getInstance();
 
         std::shared_ptr<VirtualFSProvider> provider(
                 new VirtualFSProvider(plugin->getId(),
-                    plugin, fsProvider, true));
+                                      plugin, fsProvider, true));
 
         pin->registerCallbackHandler(provider.get());
 
-        pluginState->interface =  std::shared_ptr<streamfs::PluginInterface>(plugin);
+        pluginState->interface = std::shared_ptr<streamfs::PluginInterface>(plugin);
         pluginState->provider = provider;
         pluginState->libraryPath = soFile;
 
-        if(plugin->getInterfaceVersion() != STREAMFS_INTERFACE_VERSION) {
+        if (plugin->getInterfaceVersion() != STREAMFS_INTERFACE_VERSION) {
             LOG(WARNING) << "Incorrect interface version: " << plugin->getInterfaceVersion() <<
-                " minimum interface version requested: " << STREAMFS_INTERFACE_VERSION;
+                         " minimum interface version requested: " << STREAMFS_INTERFACE_VERSION;
             LOG(WARNING) << "Plugin ignored: " << plugin->getId();
             continue;
         }

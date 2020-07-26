@@ -10,15 +10,13 @@
 #include <algorithm>    // std::max
 
 
-
-template <>
+template<>
 size_t BufferPool<buffer_chunk>::read(
-        char* bufferChunks,
+        char *bufferChunks,
         size_t length,
         uint64_t offset,
         size_t left_padding,
-        size_t right_padding)
-{
+        size_t right_padding) {
     if (exitPending)
         return 0;
 
@@ -26,22 +24,22 @@ size_t BufferPool<buffer_chunk>::read(
     auto capacity = mCircBuf.capacity();
     auto readEnd = offset + length;
 
-    if ( (mGotLastBuffer &&  offset >= mTotalBufCount)  ) {
+    if ((mGotLastBuffer && offset >= mTotalBufCount)) {
         // producer closed the data stream.
         return 0;
     }
 
     if (left_padding >= BUFFER_CHUNK_SIZE ||
         right_padding >= BUFFER_CHUNK_SIZE ||
-        (length - left_padding - right_padding) < 0 ) {
+        (length - left_padding - right_padding) < 0) {
 
         return 0;
     }
 
-    if ( (mTotalBufCount - offset)  > mCircBuf.capacity()
-            || offset > mTotalBufCount
-            || length > capacity
-       ) {
+    if ((mTotalBufCount - offset) > mCircBuf.capacity()
+        || offset > mTotalBufCount
+        || length > capacity
+            ) {
         return 0;
     }
 
@@ -62,16 +60,16 @@ size_t BufferPool<buffer_chunk>::read(
 
         for (size_t i = 0; i < length; i++) {
 
-            if ( i == 0) {
+            if (i == 0) {
                 leftSkip = left_padding;
             } else {
                 leftSkip = 0;
             }
 
             if (i == length - 1) {
-                 rightSkip = right_padding;
+                rightSkip = right_padding;
             } else {
-                 rightSkip = 0;
+                rightSkip = 0;
             }
 
             lastItemCopySize = BUFFER_CHUNK_SIZE - leftSkip - rightSkip;
@@ -84,8 +82,8 @@ size_t BufferPool<buffer_chunk>::read(
             auto startPos = endPos - (mTotalBufCount - offset) + i;
             mLastReadLocation = startPos;
             memcpy(bufferChunks + off,
-                       mCircBuf[startPos].data() + leftSkip,
-                       lastItemCopySize);
+                   mCircBuf[startPos].data() + leftSkip,
+                   lastItemCopySize);
             off += lastItemCopySize;
         }
 
@@ -93,9 +91,8 @@ size_t BufferPool<buffer_chunk>::read(
     }
 }
 
-template <>
-size_t BufferPool<buffer_chunk>::readRandomAccess(char* data, size_t size, uint64_t offsetBytes)
-{
+template<>
+size_t BufferPool<buffer_chunk>::readRandomAccess(char *data, size_t size, uint64_t offsetBytes) {
     auto left_padding = offsetBytes % BUFFER_CHUNK_SIZE;
     auto right_padding = (BUFFER_CHUNK_SIZE - (left_padding + size) % BUFFER_CHUNK_SIZE) % BUFFER_CHUNK_SIZE;
     size_t length = (left_padding + right_padding + size) / BUFFER_CHUNK_SIZE;
@@ -103,9 +100,8 @@ size_t BufferPool<buffer_chunk>::readRandomAccess(char* data, size_t size, uint6
     return read(data, length, offset, left_padding, right_padding);
 }
 
-template <>
-void BufferPool<buffer_chunk>::clear()
-{
+template<>
+void BufferPool<buffer_chunk>::clear() {
     boost::mutex::scoped_lock lock(m_w_mutex);
     mGotLastBuffer = false;
     mTotalBufCount = 0;
@@ -114,8 +110,8 @@ void BufferPool<buffer_chunk>::clear()
     mCircBuf.clear();
 }
 
-template <>
-void BufferPool<buffer_chunk>::pushBuffer(buffer_chunk& buffer, bool lastBuffer, size_t lastBufferSize) {
+template<>
+void BufferPool<buffer_chunk>::pushBuffer(buffer_chunk &buffer, bool lastBuffer, size_t lastBufferSize) {
     if (exitPending)
         return;
 
@@ -124,7 +120,7 @@ void BufferPool<buffer_chunk>::pushBuffer(buffer_chunk& buffer, bool lastBuffer,
     {
         mCircBuf.push_back(buffer);
         mTotalBufCount++;
-        if(lastBuffer) {
+        if (lastBuffer) {
             mGotLastBuffer = true;
             mLastBufferSize = lastBufferSize;
         }

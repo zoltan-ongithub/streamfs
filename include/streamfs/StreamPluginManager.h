@@ -4,6 +4,7 @@
 
 #ifndef STREAMFS_STREAMPLUGINMANAGER_H
 #define STREAMFS_STREAMPLUGINMANAGER_H
+
 #include <memory>
 #include <map>
 #include <string>
@@ -17,8 +18,9 @@ namespace streamfs {
  * Plugin manager for dynamically loaded stream plugins
  */
 class StreamPluginManager {
-    typedef streamfs::PluginInterface*(*create_fn)(PluginCallbackInterface*);
-    typedef const char * (*get_id_fn)();
+    typedef streamfs::PluginInterface *(*create_fn)(PluginCallbackInterface *);
+
+    typedef const char *(*get_id_fn)();
 
     /**
      * Plugin state includes the plugin interface the virtual FS
@@ -37,7 +39,7 @@ public:
      * @param configuration
      * @return 0 on success
      */
-    int loadPlugins(const PluginManagerConfig& configuration);
+    int loadPlugins(const PluginManagerConfig &configuration);
 
     explicit StreamPluginManager();
 

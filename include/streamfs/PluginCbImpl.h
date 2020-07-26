@@ -22,12 +22,14 @@ public:
     }
 
     void setAvailableStreams(const std::vector<std::string> &streamIds) override;
+
     void updateConfig(const PluginConfig &config) override;
-    const std::vector<std::string> & getAvailableStreams() override;
+
+    const std::vector<std::string> &getAvailableStreams() override;
 
     void notifyUpdate(const std::string &path) override;
 
-    void registerCallbackHandler(VirtualFSProvider* fsProvider)  {
+    void registerCallbackHandler(VirtualFSProvider *fsProvider) {
         mCBHandler = fsProvider;
     }
 

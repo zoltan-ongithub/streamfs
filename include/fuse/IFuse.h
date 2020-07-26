@@ -9,6 +9,7 @@
 extern "C" {
 #include <fuse.h>
 }
+
 #include <string>
 #include <map>
 #include <streamfs/VirtualFSProvider.h>
@@ -19,6 +20,7 @@ class IFuse : public FileInterface {
 
 protected:
     ~IFuse() = default;
+
 public:
     /**
      * Plugin identifier type
@@ -35,36 +37,38 @@ public:
     /**
      * Key type for identifying poll callbacks
      */
-    typedef std::pair<plugin_id , path_id> plugin_file_pair_t;
+    typedef std::pair<plugin_id, path_id> plugin_file_pair_t;
     /**
      * Key type for managing callbacks on a client context
      */
-    typedef std::map<IFuse::ctx_id_t, fuse_pollhandle*>  contextMapType;
+    typedef std::map<IFuse::ctx_id_t, fuse_pollhandle *> contextMapType;
     /**
      * Map of fail pairs to set of contexts.
      */
-    typedef std::map<plugin_file_pair_t,  contextMapType> pollHandleMapType;
+    typedef std::map<plugin_file_pair_t, contextMapType> pollHandleMapType;
 
-    static ctx_id_t fuseContextToId(fuse_context* ctx) {
+    static ctx_id_t fuseContextToId(fuse_context *ctx) {
         return std::to_string(ctx->gid) + "_" + std::to_string(ctx->pid);
     }
 
     static plugin_file_pair_t getCbId(plugin_id p, path_id path) {
-        return  std::make_pair(p, path);
+        return std::make_pair(p, path);
     }
 
-    static IFuse& getInstance()
-    {
+    static IFuse &getInstance() {
         static IFuse instance;
         return instance;
     }
 
     IFuse(IFuse const &) = delete;
+
     void operator=(IFuse const &x) = delete;
-    void registerFsProvider(VirtualFSProvider* provider) override ;
+
+    void registerFsProvider(VirtualFSProvider *provider) override;
+
     void removeFsProvider(std::string id) override;
 
-    typedef  std::map<std::string, VirtualFSProvider*> fsProviderMapType;
+    typedef std::map<std::string, VirtualFSProvider *> fsProviderMapType;
 
     fuse_operations getFuseOperations();
 
@@ -80,28 +84,31 @@ private:
 private:
     // Fuse operations
     static int getAttrCallback(const char *path, struct stat *stbuf);
+
     static int readDirCallback(const char *path, void *buf, fuse_fill_dir_t filler,
-                                off_t offset, struct fuse_file_info *fi);
+                               off_t offset, struct fuse_file_info *fi);
+
     static int openCallback(const char *path, struct fuse_file_info *fi);
+
     static int readCallback(const char *path, char *buf, size_t size, off_t offset,
-                             struct fuse_file_info *fi);
+                            struct fuse_file_info *fi);
 
     static int truncate(const char *path, off_t lenght);
 
     static int writeFileCallback(
             const char *path,
-            const char * buff,
+            const char *buff,
             size_t bufSize,
             off_t offset,
             struct fuse_file_info *fi);
 
 
-    static VirtualFSProvider *findProvider(const char* path);
+    static VirtualFSProvider *findProvider(const char *path);
 
     static int poll(const char *, fuse_file_info *, struct fuse_pollhandle *, unsigned int *);
 
 private:
-    typedef struct fuse_pollhandle* pollHandleType;
+    typedef struct fuse_pollhandle *pollHandleType;
 
     static void
     registerPoll(std::string fileName, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph, unsigned *reventsp);

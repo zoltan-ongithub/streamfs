@@ -6,7 +6,7 @@
 #include <glog/logging.h>
 #include "streamfs/PluginService.h"
 
-namespace  streamfs {
+namespace streamfs {
 
 void PluginService::start() {
     if (mThread != nullptr) {
@@ -24,7 +24,7 @@ void PluginService::loop() {
         switch (msg.type) {
             case ServiceRequestEnum::START:
                 break;
-            case ServiceRequestEnum ::STOP:
+            case ServiceRequestEnum::STOP:
                 stopPlayback();
             default:
                 LOG(WARNING) << "Service message type " << msg.type << " not in use";
