@@ -61,7 +61,7 @@ public:
         return 0;
     }
 
-    void notifyUpdate(std::string module, std::string path);
+    void notifyUpdate(const std::string& module, const std::string &path);
 
     std::vector<FileNode> getNodes();
 

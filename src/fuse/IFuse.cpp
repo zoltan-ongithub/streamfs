@@ -14,6 +14,7 @@ static std::mutex mPollConfigMtx;
 
 static IFuse::pollHandleMapType mPollHandles;
 IFuse::fsProviderMapType IFuse::fsProviders;
+static std::map<IFuse::ctx_id_t , bool> mEofReached;
 
 static struct fuse *g_fsel_fuse;
 
@@ -178,7 +179,7 @@ int IFuse::readCallback(const char *path, char *buf, size_t size, off_t offset,
     fs::path p(path);
     auto b = p.begin();
     std::advance(b, 2);
-
+    int result = 0;
     /**
      * TODO: add HASH based file name lookup.
      */
@@ -186,12 +187,22 @@ int IFuse::readCallback(const char *path, char *buf, size_t size, off_t offset,
         auto fsNodes = provider->getNodes();
         for(auto node : fsNodes) {
             if(node.name == b->string()) {
-                auto result = provider->read(node.name, buf, size, offset);
-                return result;
+                result = provider->read(node.name, buf, size, offset);
             }
         }
     }
-    return 0;
+    struct fuse_context *ctx = fuse_get_context();
+
+    if (ctx == nullptr) {
+        LOG(ERROR) << "BUG: Failed top obtain fuse context";
+        return result;
+    }
+    {
+        std::lock_guard<std::mutex> lockGuard(mPollConfigMtx);
+        auto ctx_id = IFuse::fuseContextToId(ctx);
+        mEofReached[ctx_id] = result < size;
+    }
+    return result;
 }
 
 void IFuse::registerFsProvider(VirtualFSProvider* provider) {
@@ -213,7 +224,6 @@ int IFuse::writeFileCallback(
 
     auto provider = findProvider(path);
     auto node = findNode(provider, path);
-
     if (node.empty()) {
         LOG(INFO) << "Could not find node " << path;
         return bufSize;
@@ -237,30 +247,53 @@ int IFuse::poll(const char *path, struct fuse_file_info *fi,
         return 0;
     }
 
-    std::lock_guard<std::mutex> lockGuard(mPollConfigMtx);
-
-    if (!g_fsel_fuse) {
-        struct fuse_context *cxt = fuse_get_context();
-        if (cxt)
-            g_fsel_fuse = cxt->fuse;
-    }
-
-    registerPoll(node, provider, ph);
+    registerPoll(node, provider, ph, reventsp);
 
     return 0;
 }
 
-void IFuse::registerPoll(std::string fileName, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph)
+void
+IFuse::registerPoll(std::string fileName, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph, unsigned *reventsp)
 {
-    auto id = std::make_pair(pProvider->getName(), fileName);
+    std::lock_guard<std::mutex> lockGuard(mPollConfigMtx);
+    auto id = getCbId(pProvider->getName(), fileName);
     auto handle = mPollHandles.find(id);
 
-    if (mPollHandles.find(id) != mPollHandles.end()) {
-        fuse_pollhandle_destroy(handle->second);
+    struct fuse_context *ctx = fuse_get_context();
+
+    if (ctx == nullptr) {
+        LOG(ERROR) << "BUG: Failed top obtain fuse context";
+        return;
     }
 
-    auto phPair = std::make_pair(id, ph);
-    mPollHandles.insert(phPair);
+    if (ph == nullptr) {
+        LOG(ERROR) << "BUG: Got null fuse_pollhandle";
+        return;
+    }
+
+    auto ctx_id = IFuse::fuseContextToId(ctx);
+
+    auto handles = mPollHandles.find(id);
+
+    if (handles != mPollHandles.end()) {
+        auto contextMap = handles->second;
+        auto context_handle = contextMap.find(ctx_id);
+
+        if (context_handle != contextMap.end()) {
+            fuse_pollhandle_destroy(context_handle->second);
+            contextMap.erase(context_handle);
+        }
+
+    }
+
+    mPollHandles[id][ctx_id] = ph;
+
+    auto eof = mEofReached.find(ctx_id);
+
+    // If data available return POLLIN
+    if (eof == mEofReached.end() || !eof->second) {
+        *reventsp |= POLLIN;
+    }
 }
 
 void IFuse::notifyPoll(IFuse::plugin_id provider,
@@ -268,10 +301,27 @@ void IFuse::notifyPoll(IFuse::plugin_id provider,
     std::lock_guard<std::mutex> lockGuard(mPollConfigMtx);
     auto id = std::make_pair(provider, filename);
     auto handle = mPollHandles.find(id);
+
+    auto handles = mPollHandles.find(id);
+
     if (mPollHandles.find(id) != mPollHandles.end()) {
-        auto res = fuse_notify_poll(handle->second);
-        fuse_pollhandle_destroy(handle->second);
-        mPollHandles.erase(id);
+
+        auto& ctxMap = handles->second;
+
+        //Notify all clients reached EOF
+        auto ctxPairs = ctxMap.begin();
+
+        while(ctxPairs != ctxMap.end()) {
+            auto ctx_id = ctxPairs->first;
+            auto pHandle = ctxPairs->second;
+            mEofReached[ctx_id] = false;
+            auto res = fuse_notify_poll(pHandle);
+            if (res != 0) {
+                LOG(ERROR) << "fuse_notify_poll failed with error: " << res;
+            }
+            fuse_pollhandle_destroy(pHandle);
+            ctxPairs = ctxMap.erase(ctxPairs);
+        }
     }
 
 }

@@ -18,7 +18,7 @@ sudo make install
 ```
 
 
-== Building ==
+## Building
 
 ```
 mkdir build
@@ -27,6 +27,18 @@ cmake ../
 sudo make install
 sudo ldconfig
 ```
+
+## Implementing Select callbacks
+
+Configuration options can be observed using [Select](https://man7.org/linux/man-pages/man2/select.2.html).
+It is the plugins responsibility to implement callbacks for configuration using `notifyUpdate(nodeName)`  .
+Example implementation of client can is located [here](tests/poll_example.cpp).
+
+The **select()** behaviour works as follows:
+
+* Select returns immediately if data available to read.
+* Select will block if reader reached EOF.
+* On Select unblocked it is expected that the reader will seek to file position 0 and read the new data.
 
 ## Known issues
 

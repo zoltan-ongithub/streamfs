@@ -20,6 +20,14 @@ PluginManagerConfig config = {
 StreamPluginManager pluginManager;
 int main(int argc, char *argv[])
 {
+    FLAGS_colorlogtostderr = true;
+    FLAGS_logtostderr = 1;
+    FLAGS_logtostderr = true;
+    FLAGS_alsologtostderr = true;
+    FLAGS_colorlogtostderr = true;
+    FLAGS_log_prefix = true;
+
+    google::InitGoogleLogging(argv[0]);
     assert(pluginManager.loadPlugins(config) == 0);
     pluginManager.initPlugins();
     fuse_operations o  = IFuse::getInstance().getFuseOperations();

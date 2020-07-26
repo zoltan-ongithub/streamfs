@@ -1,17 +1,24 @@
-#include <poll.h>
-#include <stdio.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <string.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 
-#define FILE_BUFFER_SIZE 256
+/**
+ *
+ *
+ *
+ */
+#define NUM_FSELECT_FILES	1
+
 int main(int argc, char *argv[]) {
     char buf[8];
-    struct pollfd pfd;
     int f;
-
 
     if (argc != 2) {
         fprintf(stderr, "Usage %s <file_name> \n", argv[0]);
@@ -20,38 +27,48 @@ int main(int argc, char *argv[]) {
 
     char* fbPath = argv[1];
 
-    for(;;) {
-        memset(buf, 0, sizeof(buf));
+	int fds[NUM_FSELECT_FILES];
 
-        if ((f = open(fbPath, O_RDONLY)) < 0) {
-            fprintf(stderr, "Failed to open file%s\n", fbPath);
-            goto quit;
-        }
+    fds[0] = open(fbPath, O_RDONLY);
 
-        if ((lseek(f, 0L, SEEK_SET)) < 0) {
-            fprintf(stderr, "Failed to seek %s\n", fbPath);
-            goto fail;
-        }
+    int  nfds = fds[NUM_FSELECT_FILES - 1] + 1;
 
-        if ((read(f, buf, 1)) < 0) {
-            fprintf(stdout, "Failed to read value %s\n", fbPath);
-            goto fail;
-        }
-
-
-        fprintf(stdout, "Got buffer %s\n",  buf);
-
-        pfd.fd = f;
-        pfd.events = POLLPRI;
-        fprintf(stdout, "Calling poll\n");
-        poll(&pfd, 1, -1);
-        fprintf(stdout, "Poll completed\n");
-        close(f);
+    if (fds < 0)  {
+        perror("failed to open file");
+        return 1;
     }
-    return 0;
 
-fail:
-    close(f);
-quit:
-    return -1;
+	for(int tries=0; tries < 16; tries++) {
+	    static char buf[256];
+		fd_set rfds;
+		int res;
+
+		FD_ZERO(&rfds);
+		for (int i = 0; i < NUM_FSELECT_FILES; i++) {
+			FD_SET(fds[i], &rfds);
+        }
+
+		res = select(nfds, &rfds, NULL, NULL, NULL);
+
+		if (res < 0) {
+			perror("Calling select failed");
+			return 1;
+		}
+
+		for (int i = 0; i < NUM_FSELECT_FILES; i++) {
+			if (!FD_ISSET(fds[i], &rfds)) {
+				continue;
+			}
+
+            lseek(fds[i], 0, SEEK_SET);
+
+			res = read(fds[i], buf, sizeof(buf));
+			if (res < 0) {
+				perror("Failed to read data");
+				return 1;
+			}
+			printf("Got value: %s\n", buf);
+		}
+	}
+	return 0;
 }

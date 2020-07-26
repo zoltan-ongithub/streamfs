@@ -20,12 +20,38 @@ class IFuse : public FileInterface {
 protected:
     ~IFuse() = default;
 public:
+    /**
+     * Plugin identifier type
+     */
     typedef std::string plugin_id;
+    /**
+     * Path identifier type
+     */
     typedef std::string path_id;
-
+    /**
+     * Fuse client context id
+     */
+    typedef std::string ctx_id_t;
+    /**
+     * Key type for identifying poll callbacks
+     */
     typedef std::pair<plugin_id , path_id> plugin_file_pair_t;
-    typedef std::map<plugin_file_pair_t, struct fuse_pollhandle* > pollHandleMapType;
+    /**
+     * Key type for managing callbacks on a client context
+     */
+    typedef std::map<IFuse::ctx_id_t, fuse_pollhandle*>  contextMapType;
+    /**
+     * Map of fail pairs to set of contexts.
+     */
+    typedef std::map<plugin_file_pair_t,  contextMapType> pollHandleMapType;
 
+    static ctx_id_t fuseContextToId(fuse_context* ctx) {
+        return std::to_string(ctx->gid) + "_" + std::to_string(ctx->pid);
+    }
+
+    static plugin_file_pair_t getCbId(plugin_id p, path_id path) {
+        return  std::make_pair(p, path);
+    }
 
     static IFuse& getInstance()
     {
@@ -72,12 +98,13 @@ private:
 
     static VirtualFSProvider *findProvider(const char* path);
 
-    static int poll(const char *, fuse_file_info *, fuse_pollhandle *, unsigned int *);
+    static int poll(const char *, fuse_file_info *, struct fuse_pollhandle *, unsigned int *);
 
 private:
     typedef struct fuse_pollhandle* pollHandleType;
 
-    static void registerPoll(std::string filename, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph);
+    static void
+    registerPoll(std::string fileName, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph, unsigned *reventsp);
 };
 
 

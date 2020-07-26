@@ -18,7 +18,7 @@
 namespace streamfs {
 class PluginService;
 
-#define STREAMFS_INTERFACE_VERSION 2
+#define STREAMFS_INTERFACE_VERSION 3
 
 /**
  * Generic plugin interface for 3rd party plugins

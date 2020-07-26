@@ -153,3 +153,5 @@ INSTALL(TARGETS sampleplugin
 set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/export
         CACHE INTERNAL "${PROJECT_NAME}: Include Directories" FORCE)
+
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")

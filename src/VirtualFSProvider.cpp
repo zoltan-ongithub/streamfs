@@ -3,7 +3,7 @@
 //
 
 #include <fuse/IFuse.h>
-#include "VirtualFSProvider.h"
+#include "streamfs/VirtualFSProvider.h"
 //#include "PluginCbImpl.h"
 #include "streamfs/PluginCallbackInterface.h"
 #include "streamfs/PluginInterface.h"
@@ -16,7 +16,7 @@ std::vector<VirtualFSProvider::FileNode> VirtualFSProvider::getNodes() {
     auto offset = 0;
 
     if (inf) {
-        auto fileList = inf->getAvailableStreams();
+        auto& fileList = inf->getAvailableStreams();
         nodes.resize(fileList.size() + mSubProviders.size());
         for( const auto &provider: fileList ){
             nodes[offset].type = NodeTypes::FILE_TYPE;
@@ -94,6 +94,6 @@ int VirtualFSProvider::write(std::string node, const char *buf, size_t size, uin
     return -1;
 }
 
-void VirtualFSProvider::notifyUpdate(std::string module, std::string path) {
+void VirtualFSProvider::notifyUpdate(const std::string& module, const std::string& path) {
     IFuse::notifyPoll(module, path);
 }

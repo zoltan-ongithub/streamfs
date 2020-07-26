@@ -27,13 +27,14 @@ public:
         mCb->updateConfig(config);
     }
 
-    void setAvailableStreams(std::vector<std::string> streamIds)
+    void setAvailableStreams(const std::vector<std::string>& streamIds)
     {
         mCb->setAvailableStreams(streamIds);
     }
 
-    std::vector<std::string>  getAvailableStreams() {
-        return mCb->getAvailableStreams();
+    const std::vector<std::string> & getAvailableStreams() {
+        auto& res = mCb->getAvailableStreams();
+        return res;
     }
 
     /**
