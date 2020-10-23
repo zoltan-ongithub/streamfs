@@ -148,3 +148,10 @@ void BufferPool<buffer_chunk>::clearToLastRead() {
     mCircBuf.erase_end(eraseCount);
     mTotalBufCount -= eraseCount;
 }
+
+template<>
+void BufferPool<buffer_chunk>::abortAllOperations() {
+    boost::mutex::scoped_lock lock(m_w_mutex);
+    mProducer->stop();
+    mNotEnoughBytes.notify_all();
+}

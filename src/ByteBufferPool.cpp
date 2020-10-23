@@ -30,3 +30,7 @@ size_t ByteBufferPool::readRandomAccess(char *data, size_t size, uint64_t offset
 void ByteBufferPool::clear() {
     BufferPool::clear();
 }
+
+void ByteBufferPool::abortAllOperations() {
+    BufferPool::abortAllOperations();
+}

@@ -70,5 +70,8 @@ streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterfac
 // Implement function to return streamfs ID
 const char *GET_STREAMFS_PLUGIN_ID();
 
+// Implement function to unload streamfs plugins
+void UNLOAD_STREAMFS_PLUGIN(streamfs::PluginInterface *mPluginsInt);
+
 }
 #endif //STREAMFS_PLUGININTERFACE_H

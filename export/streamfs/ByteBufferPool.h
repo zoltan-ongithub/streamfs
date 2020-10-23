@@ -28,6 +28,7 @@ public:
     size_t readRandomAccess(char* data, size_t size, uint64_t offsetBytes) override ;
     void pushBuffer(buffer_chunk &buffer,  bool lastBuffer = false, size_t lastBufferSize = 0) override;
     void clear() override;
+    void abortAllOperations() override;
 };
 
 

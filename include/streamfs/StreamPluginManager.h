@@ -22,6 +22,8 @@ class StreamPluginManager {
 
     typedef const char *(*get_id_fn)();
 
+    typedef void(*unload_fn)(streamfs::PluginInterface *);
+
     /**
      * Plugin state includes the plugin interface the virtual FS
      * provided and the load path of the plugin.
@@ -33,6 +35,11 @@ class StreamPluginManager {
     };
 
 public:
+    /**
+     * Unload plugins when sigterm received
+     */
+    void unloadPlugins();
+
     /**
      * Dynamically load plugins.
      * This will also deallocate previously opened plugins
@@ -66,6 +73,8 @@ public:
 private:
     std::map<std::string, std::shared_ptr<PluginState>> mPlugins;
     std::mutex mPluginMtx;
+    void **mHandleArray;
+    int mHandleCount;
 
 };
 }

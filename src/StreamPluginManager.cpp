@@ -20,6 +20,58 @@ namespace streamfs {
 
 StreamPluginManager::StreamPluginManager() = default;
 
+void StreamPluginManager::unloadPlugins() {
+    dlerror();
+    for (int i = 0; i < mHandleCount; i++) {
+       if (mHandleArray != nullptr && mHandleArray[i] != nullptr) {
+         void *pluginUnLoad = (void *) dlsym(mHandleArray[i], "UNLOAD_STREAMFS_PLUGIN");
+
+         if (pluginUnLoad == nullptr) {
+           LOG(WARNING) << " StreamPluginManager::unloadPlugins pluginUnLoad failed with dlerror : " << dlerror();
+           continue;
+         }
+         dlerror();
+         void *pluginId = (void *) dlsym(mHandleArray[i], "GET_STREAMFS_PLUGIN_ID");
+
+         if (pluginId == nullptr) {
+           LOG(WARNING) << " StreamPluginManager::unloadPlugins pluginId failed with dlerror : " << dlerror();
+           continue;
+         }
+
+         get_id_fn get_id_call = nullptr;
+        *reinterpret_cast<void **>(&get_id_call) = pluginId;
+        const char *pluginIdTmp = get_id_call();
+        if (pluginIdTmp == nullptr) {
+            LOG(WARNING) << " StreamPluginManager::unloadPlugins pluginIdTmp is nullptr ";
+            continue;
+        }
+        std::string pluginStr(pluginIdTmp);
+
+        auto res = mPlugins.find(pluginStr);
+        if (res == mPlugins.end())
+        {
+          LOG(WARNING) << " StreamPluginManager::unloadPlugins pluginStr is not proper ";
+          continue;
+        }
+        std::shared_ptr<streamfs::PluginInterface> pluginInt = res->second->interface;
+
+        unload_fn unload_plugin = nullptr;
+        *reinterpret_cast<void **>(&unload_plugin) = pluginUnLoad;
+        unload_plugin(pluginInt.get());
+
+        dlerror();
+        dlclose(mHandleArray[i]);
+        char *errstr = dlerror();
+        if (errstr != NULL)
+          LOG(ERROR) << "dlclose returns dlerror : " << errstr;
+       }
+    }
+    if (mHandleArray != nullptr) {
+      free(mHandleArray);
+      mHandleArray = nullptr;
+    }
+}
+
 int StreamPluginManager::loadPlugins(const PluginManagerConfig &configuration) {
     std::lock_guard<std::mutex> lock(mPluginMtx);
     std::set<std::string> sharedLibs;
@@ -38,6 +90,9 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig &configuration) {
             }
         }
     }
+    mHandleCount = 0;
+    mHandleArray = (void **) malloc(sizeof(void *) * sharedLibs.size());
+
     for (const std::string &soFile : sharedLibs) {
         LOG(INFO) << "Loading plugin:" << soFile << "\n";
 
@@ -121,6 +176,9 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig &configuration) {
         mPlugins.insert(std::make_pair(std::string(plugin->getId()), pluginState));
 
         LOG(INFO) << "Loaded plugin:" << plugin->getId();
+
+        mHandleArray[mHandleCount] = hndl;
+        mHandleCount++;
     }
 
     return 0;

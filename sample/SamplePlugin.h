@@ -54,4 +54,7 @@ const char *GET_STREAMFS_PLUGIN_ID() {
     return "sample_plugin";
 }
 
+void UNLOAD_STREAMFS_PLUGIN(streamfs::PluginInterface *mSample) {
+}
+
 }

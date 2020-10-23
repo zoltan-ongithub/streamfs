@@ -84,6 +84,11 @@ public:
         return mCircBuf.size();
     }
 
+    /**
+     * producer stop
+     */
+    virtual void abortAllOperations();
+
     ~BufferPool() {
         mProducer->stop();
         exitPending = true;
