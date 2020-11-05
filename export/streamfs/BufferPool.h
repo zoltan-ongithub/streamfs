@@ -85,6 +85,14 @@ public:
     }
 
     /**
+     * Get virtual size of the ring buffer
+     * @return
+     */
+    size_t getTotalBufferCount() {
+        return mTotalBufCount;
+    }
+
+    /**
      * producer stop
      */
     virtual void abortAllOperations();

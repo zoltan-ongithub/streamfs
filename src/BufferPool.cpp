@@ -17,8 +17,10 @@ size_t BufferPool<buffer_chunk>::read(
         uint64_t offset,
         size_t left_padding,
         size_t right_padding) {
-    if (exitPending)
+    if (exitPending) {
+        LOG(WARNING) << "BufferPool::read : return 0 : exitPending";
         return 0;
+    }
 
     boost::mutex::scoped_lock lock(m_mutex);
     auto capacity = mCircBuf.capacity();
@@ -26,13 +28,14 @@ size_t BufferPool<buffer_chunk>::read(
 
     if ((mGotLastBuffer && offset >= mTotalBufCount)) {
         // producer closed the data stream.
+        LOG(WARNING) << "BufferPool::read : return 0 : offset : " << offset << " mTotalBufCount : " << mTotalBufCount;
         return 0;
     }
 
     if (left_padding >= BUFFER_CHUNK_SIZE ||
         right_padding >= BUFFER_CHUNK_SIZE ||
         (length - left_padding - right_padding) < 0) {
-
+        LOG(WARNING) << "BufferPool::read : return 0 : length : " << length << " left_padding : " << left_padding<< " right_padding : " << right_padding;
         return 0;
     }
 
@@ -40,6 +43,7 @@ size_t BufferPool<buffer_chunk>::read(
         || offset > mTotalBufCount
         || length > capacity
             ) {
+        LOG(WARNING) << "BufferPool::read : return 0 : length : " << length << " buffer-offset : " << offset << " mTotalBufCount : " << mTotalBufCount << " mCircBuf.capacity() : " << mCircBuf.capacity() << " capacity : " << capacity;
         return 0;
     }
 

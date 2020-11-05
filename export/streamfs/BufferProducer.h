@@ -6,6 +6,7 @@
 #define STREAMFS_BUFFERPRODUCER_H
 
 #include <cstddef>
+#include <boost/thread/mutex.hpp>
 
 template <typename T> class BufferPool;
 
@@ -23,11 +24,23 @@ public:
 
 protected:
     void setBufferPool(BufferPool<T> *bufferPool) {
-
+        boost::mutex::scoped_lock lock(m_mutex);
         mBufferPool = bufferPool;
+    }
+
+    virtual size_t getTotalBufferCount() {
+        size_t totalBufferCount;
+        boost::mutex::scoped_lock lock(m_mutex);
+        if (mBufferPool) {
+            totalBufferCount =  mBufferPool->getTotalBufferCount();
+        } else {
+            totalBufferCount = 0;
+        }
+        return totalBufferCount;
     }
 private:
     BufferPool<T> *mBufferPool;
+    boost::mutex m_mutex;
 };
 
 #endif //STREAMFS_BUFFERPRODUCER_H
