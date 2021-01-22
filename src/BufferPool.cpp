@@ -115,7 +115,7 @@ void BufferPool<buffer_chunk>::clear() {
 }
 
 template<>
-void BufferPool<buffer_chunk>::pushBuffer(buffer_chunk &buffer, bool lastBuffer, size_t lastBufferSize) {
+void BufferPool<buffer_chunk>::pushBuffer(const buffer_chunk &buffer, bool lastBuffer, size_t lastBufferSize) {
     if (exitPending)
         return;
 

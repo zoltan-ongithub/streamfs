@@ -7,7 +7,7 @@
 
 
 template<>
-void BufferProducer<buffer_chunk>::queueBuffer(buffer_chunk &buffer, bool lastBuffer, size_t lastBufferSize) {
+void BufferProducer<buffer_chunk>::queueBuffer(const buffer_chunk &buffer, bool lastBuffer, size_t lastBufferSize) {
     mBufferPool->pushBuffer(buffer, lastBuffer, lastBufferSize);
 }
 

@@ -2,8 +2,9 @@
 // Created by Zoltan Kuscsik on 4/17/20.
 //
 
-#ifndef STREAMFS_CONFIG_H
-#define STREAMFS_CONFIG_H
+#pragma once
+
+#include <array>
 
 // Plugin location directory
 #define STREAMFS_PLUGIN_DIRECTORY "plugins/"
@@ -15,5 +16,3 @@
 #define MAX_BUFFER_LIST_COUNT 256
 
 using buffer_chunk  = std::array<unsigned char, BUFFER_CHUNK_SIZE>;
-
-#endif //STREAMFS_CONFIG_H

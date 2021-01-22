@@ -6,7 +6,7 @@
 
 #include <utility>
 
-void ByteBufferPool::pushBuffer(buffer_chunk &buffer, bool lastBuffer, size_t lastBufferSize) {
+void ByteBufferPool::pushBuffer(const buffer_chunk &buffer, bool lastBuffer, size_t lastBufferSize) {
     BufferPool::pushBuffer(buffer, lastBuffer, lastBufferSize);
 }
 

@@ -56,7 +56,7 @@ public:
 
     virtual size_t readRandomAccess(char* data, size_t size, uint64_t offsetBytes)  = 0;
 
-    virtual void pushBuffer(T& buffer,  bool lastBuffer = false, size_t lastBufferSize = 0);
+    virtual void pushBuffer(const T& buffer,  bool lastBuffer = false, size_t lastBufferSize = 0);
 
     /**
      * Clear buffer. Can be called only from the consumer thread

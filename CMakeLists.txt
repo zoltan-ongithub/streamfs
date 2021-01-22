@@ -49,9 +49,6 @@ add_library(streamlink SHARED
         src/PluginManagerConfig.cpp
         src/BufferQueue.cpp
         src/PluginImpl.cpp
-        src/StreamPluginManager.cpp
-        src/StreamManager.cpp
-        src/Stream.cpp
         src/MemAllocator.cpp include/streamfs/MemAllocator.h
         src/ActiveBuffer.cpp include/streamfs/ActiveBuffer.h
         src/BufferPool.cpp export/streamfs/BufferPool.h

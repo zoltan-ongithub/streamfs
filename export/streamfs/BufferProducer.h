@@ -2,8 +2,7 @@
 // Created by Zoltan Kuscsik on 4/20/20.
 //
 
-#ifndef STREAMFS_BUFFERPRODUCER_H
-#define STREAMFS_BUFFERPRODUCER_H
+#pragma once
 
 #include <cstddef>
 #include <boost/thread/mutex.hpp>
@@ -16,17 +15,11 @@ class BufferProducer {
     friend  class BufferPool;
 
 public:
-    virtual void queueBuffer(T &buffer, bool lastBuffer = false, size_t lastBufferSize = 0) {
+    virtual void queueBuffer(const T &buffer, bool lastBuffer = false, size_t lastBufferSize = 0) {
         mBufferPool->pushBuffer(buffer, lastBuffer, lastBufferSize);
     }
 
     virtual void stop();
-
-protected:
-    void setBufferPool(BufferPool<T> *bufferPool) {
-        boost::mutex::scoped_lock lock(m_mutex);
-        mBufferPool = bufferPool;
-    }
 
     virtual size_t getTotalBufferCount() {
         size_t totalBufferCount;
@@ -38,9 +31,14 @@ protected:
         }
         return totalBufferCount;
     }
+
+protected:
+    void setBufferPool(BufferPool<T> *bufferPool) {
+        boost::mutex::scoped_lock lock(m_mutex);
+        mBufferPool = bufferPool;
+    }
+
 private:
     BufferPool<T> *mBufferPool;
     boost::mutex m_mutex;
 };
-
-#endif //STREAMFS_BUFFERPRODUCER_H
