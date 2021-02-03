@@ -4,6 +4,10 @@ Dependencies:
 ```
  sudo apt-get install libfuse-dev libboost-thread-dev cmake libboost-filesystem-dev build-essential libgtest-dev libgoogle-glog-dev
 ```
+With system using boost 1.7 as default:
+```
+ sudo apt-get install libfuse-dev libboost-thread1.67-dev cmake libboost-filesystem1.67-dev build-essential libgtest-dev libgoogle-glog-dev
+```
 
 
 
