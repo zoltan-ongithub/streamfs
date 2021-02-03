@@ -22,14 +22,8 @@ public:
     virtual void stop();
 
     virtual size_t getTotalBufferCount() {
-        size_t totalBufferCount;
         boost::mutex::scoped_lock lock(m_mutex);
-        if (mBufferPool) {
-            totalBufferCount =  mBufferPool->getTotalBufferCount();
-        } else {
-            totalBufferCount = 0;
-        }
-        return totalBufferCount;
+        return mBufferPool->getTotalBufferCount();
     }
 
 protected:
