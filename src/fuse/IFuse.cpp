@@ -12,9 +12,13 @@
 
 static std::mutex mPollConfigMtx;
 
+std::mutex IFuse::mStateMtx;
+
 static IFuse::pollHandleMapType mPollHandles;
 IFuse::fsProviderMapType IFuse::fsProviders;
 static std::map<IFuse::ctx_id_t, bool> mEofReached;
+
+static uint64_t fh_counter_g  = 0;
 
 static struct fuse *g_fsel_fuse;
 
@@ -31,6 +35,7 @@ fuse_operations IFuse::getFuseOperations() {
         fop.write = IFuse::writeFileCallback;
         fop.truncate = IFuse::truncate;
         fop.poll = IFuse::poll;
+        fop.release = IFuse::release;
         return fop;
     }();
     return ops;
@@ -155,6 +160,8 @@ int IFuse::openCallback(const char
                         *path,
                         struct fuse_file_info *fi) {
 
+    std::lock_guard<std::mutex> lockGuard(mStateMtx);
+
     auto provider = findProvider(path);
     fs::path p(path);
     auto b = p.begin();
@@ -167,10 +174,17 @@ int IFuse::openCallback(const char
 
         for (auto node : fsNodes) {
             if (node.name == b->string()) {
-                return provider->open(node.name);
+                auto res = provider->open(node.name);;
+                if (res >= 0) {
+                    fi->fh = fh_counter_g;
+                    fh_counter_g++;
+                }
+
+                return res;
             }
         }
     }
+
     return -ENOENT;
 }
 
@@ -181,6 +195,7 @@ int IFuse::readCallback(const char *path, char *buf, size_t size, off_t offset,
     auto b = p.begin();
     std::advance(b, 2);
     int result = 0;
+
     /**
      * TODO: add HASH based file name lookup.
      */
@@ -188,7 +203,7 @@ int IFuse::readCallback(const char *path, char *buf, size_t size, off_t offset,
         auto fsNodes = provider->getNodes();
         for (auto node : fsNodes) {
             if (node.name == b->string()) {
-                result = provider->read(node.name, buf, size, offset);
+                result = provider->read(fi->fh, node.name, buf, size, offset);
             }
         }
     }
@@ -325,4 +340,24 @@ void IFuse::notifyPoll(IFuse::plugin_id provider,
         }
     }
 
+}
+
+int IFuse::release(const char *path, fuse_file_info *info) {
+
+    auto provider = findProvider(path);
+    fs::path p(path);
+    auto b = p.begin();
+    std::advance(b, 2);
+    int result = 0;
+
+    if (provider != nullptr) {
+        auto fsNodes = provider->getNodes();
+        for (const auto& node : fsNodes) {
+            if (node.name == b->string()) {
+                result = provider->release(info->fh, node.name);
+            }
+        }
+    }
+
+    return 0;
 }

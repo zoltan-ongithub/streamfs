@@ -48,8 +48,7 @@ public:
      */
     virtual void stopPlayback() = 0;
 
-    virtual int read(std::string path,  char *buf,
-                     size_t size, uint64_t offset)  =  0;
+    virtual int read(uint64_t handle, std::string path, char *buf, size_t size, uint64_t offset) =  0;
 
     virtual int open(std::string path)  =  0;
 

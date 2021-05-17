@@ -63,17 +63,13 @@ VirtualFSProvider::VirtualFSProvider(const std::string &name, std::weak_ptr<stre
     }
 }
 
-int VirtualFSProvider::read(std::string node,
-                            char *buf,
-                            size_t size,
-                            uint64_t offset) {
+int VirtualFSProvider::read(uint64_t handle, std::string node, char *buf, size_t size, uint64_t offset) {
     auto x = mCb.lock();
 
     if (x) {
-        return x->read(node, buf, size, offset);
+        return x->read(handle, node, buf, size, offset);
     }
     return -ENOENT;
-
 }
 
 int VirtualFSProvider::open(std::string basicString) {
@@ -98,4 +94,13 @@ int VirtualFSProvider::write(std::string node, const char *buf, size_t size, uin
 
 void VirtualFSProvider::notifyUpdate(const std::string &module, const std::string &path) {
     IFuse::notifyPoll(module, path);
+}
+
+int VirtualFSProvider::release(uint64_t handle, std::string nodeName) {
+    auto x = mCb.lock();
+
+    if (x) {
+        return x->release(handle, nodeName);
+    }
+    return 0;
 }

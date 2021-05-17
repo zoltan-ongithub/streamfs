@@ -174,7 +174,7 @@ void SamplePlugin::updateConfiguration(const PluginConfig &config) {
     mConfig = config;
 }
 
-int SamplePlugin::read(std::string path, char *buf, size_t size, uint64_t offset) {
+int SamplePlugin::read(uint64_t handle, std::string path, char *buf, size_t size, uint64_t offset) {
     std::lock_guard<std::mutex> lockGuard(mFopMutex);
 
     auto bQueue = mBufferPool.find(path);
@@ -200,6 +200,10 @@ void SamplePlugin::newBufferNotify(buffer_chunk &buffer) {
 }
 
 int SamplePlugin::write(std::string node, const char *buf, size_t size, uint64_t offset) {
+    return 0;
+}
+
+int SamplePlugin::release(uint64_t handle, std::string path) {
     return 0;
 }
 

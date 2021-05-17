@@ -94,6 +94,8 @@ private:
                             struct fuse_file_info *fi);
 
     static int truncate(const char *path, off_t lenght);
+    static int release(const char *, fuse_file_info *);
+
 
     static int writeFileCallback(
             const char *path,
@@ -110,8 +112,11 @@ private:
 private:
     typedef struct fuse_pollhandle *pollHandleType;
 
+    static std::mutex mStateMtx;
+
     static void
     registerPoll(std::string fileName, VirtualFSProvider *pProvider, struct fuse_pollhandle *ph, unsigned *reventsp);
+
 };
 
 

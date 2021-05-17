@@ -67,11 +67,11 @@ public:
 
     int open(std::string node);
 
-    int read(std::string node, char *buf,
-             size_t size,
-             uint64_t offset);
+    int read(uint64_t handle, std::string node, char *buf, size_t size, uint64_t offset);
 
     int write(std::string node, const char *buf, size_t size, uint64_t offset);
+
+    int release(uint64_t handle, std::string nodeName);
 
 private:
     std::weak_ptr<streamfs::PluginInterface> mCb;

@@ -31,9 +31,11 @@ public:
 
     void newBufferNotify(buffer_chunk &buffer);
 
-    int read(std::string path, char *buf, size_t size, uint64_t offset) override;
+    int read(uint64_t handle, std::string path, char *buf, size_t size, uint64_t offset) override;
 
     int write(std::string node, const char *buf, size_t size, uint64_t offset) override;
+
+    int release(uint64_t handle, std::string path) override;
 
 private:
     std::weak_ptr<streamfs::PluginCallbackInterface> mCb;
