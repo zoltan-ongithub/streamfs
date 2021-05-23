@@ -78,7 +78,7 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
                     switch (node.type) {
                         case FILE_TYPE:
                             stbuf->st_nlink = 2;
-                            stbuf->st_size = INT64_MAX;
+                            stbuf->st_size = provider->getSize(node.name);
                             stbuf->st_mode = S_IFREG | 0777;
                             return 0;
                         case DIRECTORY_TYPE:
@@ -359,5 +359,5 @@ int IFuse::release(const char *path, fuse_file_info *info) {
         }
     }
 
-    return 0;
+    return result;
 }

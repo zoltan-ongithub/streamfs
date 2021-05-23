@@ -207,4 +207,8 @@ int SamplePlugin::release(uint64_t handle, std::string path) {
     return 0;
 }
 
+uint64_t SamplePlugin::getSize(std::string path) {
+    return 0;
+}
+
 }

@@ -37,6 +37,8 @@ public:
 
     int release(uint64_t handle, std::string path) override;
 
+    uint64_t getSize(std::string path) override;
+
 private:
     std::weak_ptr<streamfs::PluginCallbackInterface> mCb;
     PluginConfig mConfig{};

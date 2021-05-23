@@ -46,11 +46,17 @@ public:
 
     virtual int open(std::string path)  =  0;
 
+
     virtual int read(uint64_t handle, std::string path, char *buf, size_t size, uint64_t offset) =  0;
 
     virtual int release(uint64_t handle, std::string path) =  0;
 
-    virtual int write(std::string node, const char *buf, size_t size, uint64_t offset) = 0;
+    virtual uint64_t getSize(std::string path) =  0;
+
+    virtual int write(std::string node,
+                      const char *buf,
+                      size_t size,
+                      uint64_t offset) = 0;
 
     /**
      *

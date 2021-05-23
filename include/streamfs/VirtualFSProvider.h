@@ -71,7 +71,9 @@ public:
 
     int write(std::string node, const char *buf, size_t size, uint64_t offset);
 
-    int release(uint64_t handle, std::string nodeName);
+    int release(uint64_t handle, const std::string &nodeName);
+
+    uint64_t getSize(const std::string& nodeName);
 
 private:
     std::weak_ptr<streamfs::PluginInterface> mCb;

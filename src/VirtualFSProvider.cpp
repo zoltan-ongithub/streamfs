@@ -96,11 +96,21 @@ void VirtualFSProvider::notifyUpdate(const std::string &module, const std::strin
     IFuse::notifyPoll(module, path);
 }
 
-int VirtualFSProvider::release(uint64_t handle, std::string nodeName) {
+int VirtualFSProvider::release(uint64_t handle, const std::string &nodeName) {
     auto x = mCb.lock();
 
     if (x) {
         return x->release(handle, nodeName);
     }
+    return 0;
+}
+
+uint64_t VirtualFSProvider::getSize(const std::string & nodeName) {
+    auto x = mCb.lock();
+
+    if (x) {
+        return x->getSize(nodeName);
+    }
+
     return 0;
 }
