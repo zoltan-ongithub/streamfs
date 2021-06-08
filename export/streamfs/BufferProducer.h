@@ -21,7 +21,7 @@ public:
 
     virtual void stop();
 
-    virtual size_t getTotalBufferCount() {
+    virtual uint64_t getTotalBufferCount() {
         boost::mutex::scoped_lock lock(m_mutex);
         return mBufferPool->getTotalBufferCount();
     }

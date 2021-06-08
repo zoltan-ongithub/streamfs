@@ -88,7 +88,7 @@ public:
      * Get virtual size of the ring buffer
      * @return
      */
-    size_t getTotalBufferCount() {
+    uint64_t getTotalBufferCount() {
         return mTotalBufCount;
     }
 
