@@ -9,7 +9,6 @@
 #include <cstring>
 #include <algorithm>    // std::max
 
-
 template<>
 size_t BufferPool<buffer_chunk>::read(
         char *bufferChunks,
@@ -24,7 +23,6 @@ size_t BufferPool<buffer_chunk>::read(
 
     boost::mutex::scoped_lock lock(m_mutex);
     auto capacity = mCircBuf.capacity();
-    auto readEnd = offset + length;
 
     if ((mGotLastBuffer && offset >= mTotalBufCount)) {
         // producer closed the data stream.
@@ -47,9 +45,14 @@ size_t BufferPool<buffer_chunk>::read(
         return 0;
     }
 
+    auto readEnd = offset + length;
     if (readEnd > mTotalBufCount && !mGotLastBuffer) {
-        mReadEnd = offset + length;
-        mNotEnoughBytes.wait(lock, boost::bind(&BufferPool<buffer_chunk>::hasEnoughBytes, this));
+        boost::chrono::duration<double> timeout = boost::chrono::milliseconds(BUFFER_POOL_READ_TIMEOUT_MS);
+        if (!mNotEnoughBytes.wait_for(lock, timeout, [this, readEnd](){ return readEnd <= mTotalBufCount || mGotLastBuffer; })) {
+            LOG(INFO) << __FUNCTION__ << ": no buffer chunks received before read timout";
+            return 0;
+        }
+        mReadEnd = readEnd;
     }
 
     {

@@ -106,8 +106,6 @@ public:
     }
 
 private:
-    bool hasEnoughBytes() const { return mReadEnd <= mTotalBufCount || mGotLastBuffer; }
-
     BufferPool(const BufferPool&);
     BufferPool& operator = (const BufferPool&);
 
@@ -119,7 +117,7 @@ private:
     boost::mutex m_mutex;
     boost::mutex m_w_mutex;
 
-    boost::condition mNotEnoughBytes;
+    boost::condition_variable mNotEnoughBytes;
     uint64_t mLastReadLocation;
     void lockWaitForRead();
     uint64_t mReadEnd;

@@ -76,7 +76,7 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED OFF)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
-find_package(Boost REQUIRED COMPONENTS thread filesystem )
+find_package(Boost REQUIRED COMPONENTS thread filesystem chrono)
 
 find_package(FUSE REQUIRED)
 find_package(CURL REQUIRED)
