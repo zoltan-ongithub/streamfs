@@ -6,9 +6,16 @@
 #include <streamfs/ByteBufferPool.h>
 #include <thread>
 #include <stdlib.h>
+#include <boost/thread/condition.hpp>
 #include "test_main.h"
 
+#include "streamfs/BufferPoolThrottle.h"
+
 #include "gtest/gtest.h"
+
+
+
+#define BUFFER_POOL_CAPACITY (LIVE_POSITION_THRESHOLD_INDEX + READ_AHEAD_COUNT + 50)
 
 static unsigned int bufferReceivedCount_g = 0;
 
@@ -65,7 +72,7 @@ public:
     TestBufferPool  *pool;
     ByteBufferPool::shared_producer_type producer;
     ByteBufferPool::shared_consumer_type consumer;
-    uint64_t allocSize = 10;
+    uint64_t allocSize = BUFFER_POOL_CAPACITY;
 };
 
 TEST_F(BufferPoolTest, PassSingleElement) {
@@ -349,3 +356,113 @@ TEST_F(BufferPoolTest, ReadAfterLastItemReturnsEmpty) {
     ASSERT_EQ(result, 0);
 }
 
+#ifdef BUFFER_CHUNK_READ_THROTTLING
+TEST_F(BufferPoolTest, PlayerReadThrottleTest) {
+
+    boost::condition_variable cv;
+
+    // Nokia library buffer chunk rate in us.
+    const uint32_t kBufferChunkRate      = 25000;
+    // gstreamer buffer read size in bytes
+    const uint32_t kPlayerReadSize       = 4096;
+    // Number of buffer chunk to inject / produce.
+    // The current size of 3 * BUFFER_POOL_CAPACITY ensure we also test the logic for circular buffer rotation.
+    const uint16_t kNumberOfBufferChunks = 2*BUFFER_POOL_CAPACITY;
+    // Absolute throttle accuracy in us
+    const uint32_t kThrottleAccuracy     = 2000; // TODO: what should the value be?
+    // Vector of reference buffer latencies
+    std::vector<uint32_t> latency{0};
+
+    // Create vector of alternating reference buffer latencies
+    uint32_t refRate = kBufferChunkRate;
+    for (uint16_t i = 1; i < kNumberOfBufferChunks; ++i) {
+        if (i % 5 == 0 ) {
+            if (refRate == kBufferChunkRate) {
+                refRate = kBufferChunkRate;
+            } else {
+                refRate = kBufferChunkRate / 2;
+            }
+        }
+        latency.push_back(refRate);
+    }
+
+    // Thread simulating injection of buffer_chunks from the Nokia library
+    std::thread t1([&kBufferChunkRate, &latency, &cv, this]()
+    {
+        buffer_chunk chunk;
+        for (uint16_t i = 0; i < kNumberOfBufferChunks; ++i) {
+            memset(chunk.data(), i, chunk.size());
+           // LOG(INFO) << "------------------ i=" << i << " rate=" << latency[i];
+            std::this_thread::sleep_for(std::chrono::microseconds(latency[i]));
+            producer->queueBuffer(chunk);
+            // Notify the consumer theard when the index / number of buffer chunks pushed
+            // to the buffer pool equals the sum of the live position threshold index and
+            // read ahead count. This will ensure that the producer thread will start
+            // reading from TSB, thus testing the TSB throttling.
+            if (i == LIVE_POSITION_THRESHOLD_INDEX + READ_AHEAD_COUNT) {
+                LOG(INFO) << "notify!!!";
+                cv.notify_one();
+            }
+        }
+        producer->queueBuffer(chunk);
+    });
+
+    // Thread simulating gstreamer stream mode buffer reading.
+    std::thread t2([&kBufferChunkRate, &latency, &cv, this]()
+    {
+        boost::mutex mutex;
+        boost::unique_lock<boost::mutex> lock(mutex);
+        // Wait for the producer notify when the number of buffer chunks pushed to the
+        // buffer pool equals the sum of the live position threshold index and
+        // read ahead count.
+        cv.wait(lock);
+      //  LOG(INFO) << "got notified!";
+        char outputBytes[kPlayerReadSize];
+        for (uint64_t offset = 0; offset < (BUFFER_POOL_CAPACITY * BUFFER_CHUNK_SIZE) - kPlayerReadSize; offset += kPlayerReadSize) {
+            //LOG(INFO) << "### i=" << (offset/kPlayerReadSize)  << " readRandomAccess";
+            std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
+            auto res = pool->readRandomAccess(outputBytes, kPlayerReadSize, offset);
+            std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+
+            std::chrono::microseconds diff = (std::chrono::duration_cast<std::chrono::microseconds>(currentTime-lastTime));
+            uint32_t readTime = diff.count();
+
+            // Throttling time is evaluated the first time data is to be read from a new buffer chunk.
+            // This is determined by calculating if the associated buffer data to read spans over
+            // two adjacent buffer chunks OR if the left_padding is zero (meaning that data is read
+            // from the start of a new buffer chunk)
+            uint64_t bufferChunkIndexStart = offset / BUFFER_CHUNK_SIZE;
+            uint64_t bufferChunkIndexEnd = (offset + kPlayerReadSize - 1) / BUFFER_CHUNK_SIZE;
+            uint64_t left_padding = offset % BUFFER_CHUNK_SIZE;
+
+           // LOG(INFO) << "### i=" << (offset/kPlayerReadSize) << " start=" << bufferChunkIndexStart << " end=" << bufferChunkIndexEnd << " readTime=" << readTime;
+            uint64_t i = (offset/kPlayerReadSize);
+            if (i < READ_AHEAD_COUNT) {
+                // The first buffers the
+             //   ASSERT_NEAR (0, readTime, kThrottleAccuracy);
+                //} else if (i < LIVE_POSITION_THRESHOLD_INDEX + READ_AHEAD_COUNT )
+
+
+            } /*else if (i < 110 && i > 11) {
+                if (bufferChunkIndexStart != bufferChunkIndexEnd || left_padding == 0 && offset) {
+                    LOG(INFO) << "######################## readTime=" << readTime;
+                    //if (readAheadCount > READ_AHEAD_COUNT) {
+                      ASSERT_NEAR (latency[bufferChunkIndexEnd], readTime, kThrottleAccuracy);
+                    //}
+                }
+            } else {
+            }
+*/
+
+            if (bufferChunkIndexStart != bufferChunkIndexEnd || left_padding == 0 && offset) {
+                //if (readAheadCount > READ_AHEAD_COUNT) {
+                  //  ASSERT_NEAR (latency[bufferChunkIndexStart], readTime, kThrottleAccuracy);
+                //}
+            }
+        }
+    });
+
+    t1.join();
+    t2.join();
+}
+#endif

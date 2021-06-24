@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <thread>
 #include <glog/logging.h>
 
 #include "config.h"
@@ -21,11 +22,14 @@
 
 using buffer_chunk  = std::array<unsigned char, BUFFER_CHUNK_SIZE>;
 
+#ifdef BUFFER_CHUNK_READ_THROTTLING
+class BufferPoolThrottle;
+#endif
+
 struct BufferList{
     buffer_chunk* chunks;
     uint64_t length;
 };
-
 
 /**
  * Custom allocator to disable memory from core dump.
@@ -82,29 +86,20 @@ public:
      * Buffer pool
      * @param producer - pointer to producer.
      * @param consumer  - pointer to consumer
-     * @param preallocBufSize  - number of chunk memories to maintain.
+     * @param preAllocBufSize  - number of chunk memories to maintain.
      */
-    explicit BufferPool(
+    explicit BufferPool (
             std::shared_ptr<BufferProducer<T>> producer,
             std::shared_ptr<BufferConsumer<T>> consumer,
-            uint64_t preallocBufSize):
-            mLastReadLocation(0),
-            mReadEnd(0),
-            mProducer(producer),
-            mConsumer(consumer),
-            mCircBuf(preallocBufSize),
-            mTotalBufCount(0),
-            mGotLastBuffer(false),
-            mLastBufferSize(0)
-        {
-            mProducer->setBufferPool(this);
-        }
+            uint64_t preAllocBufSize);
+
+    virtual ~BufferPool();
 
     virtual size_t read(char* bufferChunks, size_t length, uint64_t offset, size_t left_padding , size_t right_padding ) = 0;
 
     virtual size_t readRandomAccess(char* data, size_t size, uint64_t offsetBytes)  = 0;
 
-    virtual void pushBuffer(const T& buffer,  bool lastBuffer = false, size_t lastBufferSize = 0);
+    virtual void pushBuffer(const T& buffer, bool lastBuffer = false, size_t lastBufferSize = 0);
 
     /**
      * Clear buffer. Can be called only from the consumer thread
@@ -145,17 +140,11 @@ public:
      */
     virtual void abortAllOperations();
 
-    ~BufferPool() {
-        mProducer->stop();
-        exitPending = true;
-        {
-            boost::mutex::scoped_lock lock(m_w_mutex);
-        }
-    }
-
 private:
     BufferPool(const BufferPool&);
     BufferPool& operator = (const BufferPool&);
+
+    void lockWaitForRead();
 
 private:
     std::shared_ptr<BufferProducer<T>> mProducer;
@@ -167,12 +156,16 @@ private:
 
     boost::condition_variable mNotEnoughBytes;
     uint64_t mLastReadLocation;
-    void lockWaitForRead();
+
     uint64_t mReadEnd;
     bool  mGotLastBuffer;
     size_t mLastBufferSize;
     bool exitPending = false;
-};
+    uint64_t mLastStartPos = 0;
 
+#ifdef BUFFER_CHUNK_READ_THROTTLING
+    std::unique_ptr<BufferPoolThrottle> mThrottle;
+#endif
+};
 
 #endif //STREAMFS_BUFFERPOOL_H

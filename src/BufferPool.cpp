@@ -5,9 +5,41 @@
 #include <iostream>
 #include <glog/logging.h>
 #include "streamfs/BufferPool.h"
-#include <boost/bind.hpp>
 #include <cstring>
-#include <algorithm>    // std::max
+
+#include <boost/thread/locks.hpp>
+#include <condition_variable>
+#include "streamfs/BufferPoolThrottle.h"
+
+template class BufferPool<buffer_chunk>;
+
+template <typename T>
+BufferPool<T>::BufferPool (
+        std::shared_ptr<BufferProducer<T>> producer,
+        std::shared_ptr<BufferConsumer<T>> consumer,
+        uint64_t preAllocBufSize)
+        : mLastReadLocation(0)
+        , mReadEnd(0)
+        , mProducer(producer)
+        , mConsumer(consumer)
+        , mCircBuf(preAllocBufSize)
+        , mTotalBufCount(0)
+        , mGotLastBuffer(false)
+        , mLastBufferSize(0) {
+    mProducer->setBufferPool(this);
+#ifdef BUFFER_CHUNK_READ_THROTTLING
+    mThrottle = std::make_unique<BufferPoolThrottle>(preAllocBufSize);
+#endif
+}
+
+template <typename T>
+BufferPool<T>::~BufferPool() {
+    mProducer->stop();
+    exitPending = true;
+    {
+        boost::mutex::scoped_lock lock(m_w_mutex);
+    }
+}
 
 template<>
 size_t BufferPool<buffer_chunk>::read(
@@ -16,12 +48,14 @@ size_t BufferPool<buffer_chunk>::read(
         uint64_t offset,
         size_t left_padding,
         size_t right_padding) {
+
     if (exitPending) {
         LOG(WARNING) << "BufferPool::read : return 0 : exitPending";
         return 0;
     }
 
     boost::mutex::scoped_lock lock(m_mutex);
+
     auto capacity = mCircBuf.capacity();
 
     if ((mGotLastBuffer && offset >= mTotalBufCount)) {
@@ -55,15 +89,13 @@ size_t BufferPool<buffer_chunk>::read(
         mReadEnd = readEnd;
     }
 
+
+    auto off = 0;
     {
         boost::mutex::scoped_lock lock(m_w_mutex);
-
         size_t lastItemCopySize;
-
-
         size_t leftSkip;
         size_t rightSkip;
-        auto off = 0;
 
         for (size_t i = 0; i < length; i++) {
 
@@ -87,15 +119,22 @@ size_t BufferPool<buffer_chunk>::read(
 
             auto endPos = std::min(mCircBuf.size(), capacity);
             auto startPos = endPos - (mTotalBufCount - offset) + i;
+
             mLastReadLocation = startPos;
+#ifdef BUFFER_CHUNK_READ_THROTTLING
+            mThrottle->setReadPosition(startPos);
+#endif
             memcpy(bufferChunks + off,
                    mCircBuf[startPos].data() + leftSkip,
                    lastItemCopySize);
             off += lastItemCopySize;
         }
-
-        return off;
     }
+
+#ifdef BUFFER_CHUNK_READ_THROTTLING
+    mThrottle->wait();
+#endif
+    return off;
 }
 
 template<>
@@ -115,15 +154,19 @@ void BufferPool<buffer_chunk>::clear() {
     mReadEnd = 0;
     mLastBufferSize = 0;
     mCircBuf.clear();
+#ifdef BUFFER_CHUNK_READ_THROTTLING
+    mThrottle->clear();
+#endif
 }
 
 template<>
 void BufferPool<buffer_chunk>::pushBuffer(const buffer_chunk &buffer, bool lastBuffer, size_t lastBufferSize) {
     if (exitPending)
         return;
-
+#ifdef BUFFER_CHUNK_READ_THROTTLING
+    mThrottle->registerTimePeriod();
+#endif
     boost::mutex::scoped_lock lock(m_w_mutex);
-
     {
         mCircBuf.push_back(buffer);
         mTotalBufCount++;
@@ -131,6 +174,7 @@ void BufferPool<buffer_chunk>::pushBuffer(const buffer_chunk &buffer, bool lastB
             mGotLastBuffer = true;
             mLastBufferSize = lastBufferSize;
         }
+
         mNotEnoughBytes.notify_one();
     }
 
@@ -154,6 +198,17 @@ void BufferPool<buffer_chunk>::clearToLastRead() {
     auto eraseCount = numElements - mLastReadLocation - 1;
     mCircBuf.erase_end(eraseCount);
     mTotalBufCount -= eraseCount;
+
+   // CLEAR COMPLETE -- begin
+   //mGotLastBuffer = false;
+   //mTotalBufCount = 0;
+   //mReadEnd = 0;
+   //mLastBufferSize = 0;
+   //mCircBuf.clear();
+   // CLEAR COMPLETE -- end
+#ifdef BUFFER_CHUNK_READ_THROTTLING
+    mThrottle->clearToLastRead();
+#endif
 }
 
 template<>

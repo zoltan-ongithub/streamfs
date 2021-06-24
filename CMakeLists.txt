@@ -6,6 +6,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set( CMAKE_VERBOSE_MAKEFILE on )
 
+option(BUFFER_CHUNK_READ_THROTTLING "Enable buffer chunk read throttling from the BufferPool" ON)
+if (BUFFER_CHUNK_READ_THROTTLING)
+        add_definitions(-DBUFFER_CHUNK_READ_THROTTLING)
+endif()
+
 include(CheckFileOffsetBits)
 
 CHECK_FILE_OFFSET_BITS()
@@ -37,6 +42,7 @@ include_directories(
 
 add_library(buqu SHARED
         src/BufferPool.cpp export/streamfs/BufferPool.h
+        src/BufferPoolThrottle.cpp
         src/BufferProducer.cpp
         src/BufferPool.cpp
         export/streamfs/BufferProducer.h
@@ -52,6 +58,7 @@ add_library(streamlink SHARED
         src/MemAllocator.cpp include/streamfs/MemAllocator.h
         src/ActiveBuffer.cpp include/streamfs/ActiveBuffer.h
         src/BufferPool.cpp export/streamfs/BufferPool.h
+        src/BufferPoolThrottle.cpp
         src/BufferProducer.cpp
         src/BufferPool.cpp
         export/streamfs/BufferProducer.h
@@ -64,7 +71,6 @@ add_library(streamlink SHARED
         export/streamfs/BufferConsumer.h
         src/PluginCbImpl.cpp
         include/streamfs/PluginCbImpl.h
-
         )
 
 find_package (glog)
