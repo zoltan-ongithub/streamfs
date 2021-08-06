@@ -8,6 +8,12 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/thread/condition.hpp>
 
+#include <sys/mman.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <glog/logging.h>
+
 #include "config.h"
 #include <array>
 #include "BufferProducer.h"
@@ -18,6 +24,48 @@ using buffer_chunk  = std::array<unsigned char, BUFFER_CHUNK_SIZE>;
 struct BufferList{
     buffer_chunk* chunks;
     uint64_t length;
+};
+
+
+/**
+ * Custom allocator to disable memory from core dump.
+ */
+template<typename _Tp>
+class streamfs_allocator {
+public:
+	typedef std::size_t size_type;
+	typedef std::ptrdiff_t difference_type;
+	typedef _Tp *pointer;
+	typedef const _Tp *const_pointer;
+	typedef _Tp &reference;
+	typedef const _Tp &const_reference;
+	typedef _Tp value_type;
+
+	pointer allocate(size_type n, const void *hint = 0) {
+		void *ptr;
+		auto pageSize = getpagesize();
+		auto totalSize = n * sizeof(_Tp);
+		auto ret = posix_memalign(&ptr, pageSize, totalSize);
+		if (0 != ret) {
+			LOG(ERROR) << __FUNCTION__ << " posix_memalign failed. n : " << n
+					<< " error : " << strerror(ret);
+		}
+		ret = madvise(ptr, totalSize, MADV_DONTDUMP);
+		if (0 != ret) {
+			LOG(ERROR) << __FUNCTION__ << " madvise failed. totalSize : "
+					<< totalSize << " error : " << strerror(errno);
+		}
+		return (pointer) ptr;
+	}
+
+	void deallocate(pointer p, size_type n) {
+		int ret = madvise(p, n * sizeof(_Tp), MADV_DODUMP);
+		if (0 != ret) {
+			LOG(WARNING) << __FUNCTION__ << "madvise failed. n : " << n
+					<< " error : " << strerror(errno);
+		}
+		free(p);
+	}
 };
 
 /**
@@ -112,7 +160,7 @@ private:
 private:
     std::shared_ptr<BufferProducer<T>> mProducer;
     std::shared_ptr<BufferConsumer<T>> mConsumer;
-    boost::circular_buffer<T> mCircBuf;
+    boost::circular_buffer<T , streamfs_allocator<T>> mCircBuf;
     uint64_t mTotalBufCount;
     boost::mutex m_mutex;
     boost::mutex m_w_mutex;
