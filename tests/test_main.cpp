@@ -366,60 +366,64 @@ TEST_F(BufferPoolTest, PlayerReadThrottleTest) {
     // gstreamer buffer read size in bytes
     const uint32_t kPlayerReadSize       = 4096;
     // Number of buffer chunk to inject / produce.
-    // The current size of 3 * BUFFER_POOL_CAPACITY ensure we also test the logic for circular buffer rotation.
-    const uint16_t kNumberOfBufferChunks = 2*BUFFER_POOL_CAPACITY;
-    // Absolute throttle accuracy in us
-    const uint32_t kThrottleAccuracy     = 2000; // TODO: what should the value be?
+    // We multiply by 1.75 to have more buffers produced than read back.
+    // This is to ensure that we don't go below the live position
+    // threshold during read back in the consumer thread, where throttle
+    // stops being applied.
+    const uint16_t kNumberOfBufferChunks = 1.75 * BUFFER_POOL_CAPACITY;
+    // Tolerated time inaccuracy allowed when throttle is applied
+    const uint32_t kAbsErrorThrottle     = 5000;
+    // Tolerated time inaccuracy allowed when throttle is not expected
+    const uint32_t kAbsErrorNoThrottle   = 5000;
     // Vector of reference buffer latencies
-    std::vector<uint32_t> latency{0};
+    std::vector<uint32_t> rate{0};
 
-    // Create vector of alternating reference buffer latencies
+    // Create vector of alternating reference buffer rates
     uint32_t refRate = kBufferChunkRate;
     for (uint16_t i = 1; i < kNumberOfBufferChunks; ++i) {
         if (i % 5 == 0 ) {
             if (refRate == kBufferChunkRate) {
-                refRate = kBufferChunkRate;
+                refRate = kBufferChunkRate/2;
             } else {
-                refRate = kBufferChunkRate / 2;
+                refRate = kBufferChunkRate;
             }
         }
-        latency.push_back(refRate);
+        rate.push_back(refRate);
     }
 
-    // Thread simulating injection of buffer_chunks from the Nokia library
-    std::thread t1([&kBufferChunkRate, &latency, &cv, this]()
+    // Producer thread for injection of buffer_chunks into the buffer pool
+    std::thread t1([&kBufferChunkRate, &rate, &cv, this]()
     {
         buffer_chunk chunk;
         for (uint16_t i = 0; i < kNumberOfBufferChunks; ++i) {
             memset(chunk.data(), i, chunk.size());
-           // LOG(INFO) << "------------------ i=" << i << " rate=" << latency[i];
-            std::this_thread::sleep_for(std::chrono::microseconds(latency[i]));
+            std::this_thread::sleep_for(std::chrono::microseconds(rate[i]));
             producer->queueBuffer(chunk);
             // Notify the consumer theard when the index / number of buffer chunks pushed
             // to the buffer pool equals the sum of the live position threshold index and
             // read ahead count. This will ensure that the producer thread will start
             // reading from TSB, thus testing the TSB throttling.
-            if (i == LIVE_POSITION_THRESHOLD_INDEX + READ_AHEAD_COUNT) {
-                LOG(INFO) << "notify!!!";
+            if (i == LIVE_POSITION_THRESHOLD_INDEX + READ_AHEAD_COUNT + 10) {
                 cv.notify_one();
             }
         }
         producer->queueBuffer(chunk);
     });
 
-    // Thread simulating gstreamer stream mode buffer reading.
-    std::thread t2([&kBufferChunkRate, &latency, &cv, this]()
+    // Consumer thread for reading player buffers and evaluating throttling times.
+    std::thread t2([&kBufferChunkRate, &rate, &cv, this]()
     {
         boost::mutex mutex;
         boost::unique_lock<boost::mutex> lock(mutex);
-        // Wait for the producer notify when the number of buffer chunks pushed to the
-        // buffer pool equals the sum of the live position threshold index and
-        // read ahead count.
+        // Wait for the producer to notify when the number of buffer chunks pushed to
+        // the buffer pool equals the sum of the live position threshold index and
+        // read ahead count. This is to ensure that we don't go below the live position
+        // index after initial buffer read ahead has completed. This would otherwise
+        // mean that the read position would be considered within the live window
+        // meaning that throttling wouldn't be applied.
         cv.wait(lock);
-      //  LOG(INFO) << "got notified!";
         char outputBytes[kPlayerReadSize];
         for (uint64_t offset = 0; offset < (BUFFER_POOL_CAPACITY * BUFFER_CHUNK_SIZE) - kPlayerReadSize; offset += kPlayerReadSize) {
-            //LOG(INFO) << "### i=" << (offset/kPlayerReadSize)  << " readRandomAccess";
             std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
             auto res = pool->readRandomAccess(outputBytes, kPlayerReadSize, offset);
             std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
@@ -435,30 +439,16 @@ TEST_F(BufferPoolTest, PlayerReadThrottleTest) {
             uint64_t bufferChunkIndexEnd = (offset + kPlayerReadSize - 1) / BUFFER_CHUNK_SIZE;
             uint64_t left_padding = offset % BUFFER_CHUNK_SIZE;
 
-           // LOG(INFO) << "### i=" << (offset/kPlayerReadSize) << " start=" << bufferChunkIndexStart << " end=" << bufferChunkIndexEnd << " readTime=" << readTime;
-            uint64_t i = (offset/kPlayerReadSize);
-            if (i < READ_AHEAD_COUNT) {
-                // The first buffers the
-             //   ASSERT_NEAR (0, readTime, kThrottleAccuracy);
-                //} else if (i < LIVE_POSITION_THRESHOLD_INDEX + READ_AHEAD_COUNT )
+            uint64_t playerBufferCount = (offset/kPlayerReadSize);
 
-
-            } /*else if (i < 110 && i > 11) {
-                if (bufferChunkIndexStart != bufferChunkIndexEnd || left_padding == 0 && offset) {
-                    LOG(INFO) << "######################## readTime=" << readTime;
-                    //if (readAheadCount > READ_AHEAD_COUNT) {
-                      ASSERT_NEAR (latency[bufferChunkIndexEnd], readTime, kThrottleAccuracy);
-                    //}
-                }
+            if (playerBufferCount < READ_AHEAD_COUNT) {
+                ASSERT_NEAR (0, readTime, kAbsErrorNoThrottle);
             } else {
+                if (bufferChunkIndexStart != bufferChunkIndexEnd || left_padding == 0 && offset) {
+                    ASSERT_NEAR (rate[bufferChunkIndexEnd], readTime, kAbsErrorThrottle);
+                }
             }
-*/
 
-            if (bufferChunkIndexStart != bufferChunkIndexEnd || left_padding == 0 && offset) {
-                //if (readAheadCount > READ_AHEAD_COUNT) {
-                  //  ASSERT_NEAR (latency[bufferChunkIndexStart], readTime, kThrottleAccuracy);
-                //}
-            }
         }
     });
 

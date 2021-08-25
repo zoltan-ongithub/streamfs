@@ -11,8 +11,8 @@
 // Number of considered throttle loop iterations where the read position
 // is allowed to be unchanged before the throttle loop will stop.
 #define IDLE_LIMIT_COUNT 100
-// Number of buffer packages to read after a channel change before
-// starting throttling for TSB playback.
+// Number of initial buffers allowed to be read by the player without
+// applying throttling after a channel or seek has change.
 #define READ_AHEAD_COUNT 100
 // The buffer chunk time period truncation threshold in us. A registered
 // time period less than this value will be truncated to 0 us.

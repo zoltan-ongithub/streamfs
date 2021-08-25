@@ -59,11 +59,9 @@ void BufferPoolThrottle::registerTimePeriod() {
     // compensate for buffer rotation, which will happen if the buffer
     // size and capacity are the same.
     if (mTimePeriodBuffer.size() == mTimePeriodBuffer.capacity()) {
-        if (mThrottleIndex > 0) {
-            --mThrottleIndex;
-        }
-        --mPos;
-        --mLastPos;
+        if (mThrottleIndex > 0) { --mThrottleIndex; }
+        if (mPos > 0) { --mPos; }
+        if (mLastPos > 0) { --mLastPos; }
     }
 
     mTimePeriodBuffer.push_back(time);
@@ -71,7 +69,6 @@ void BufferPoolThrottle::registerTimePeriod() {
 }
 
 void BufferPoolThrottle::setReadPosition(uint64_t pos) {
-    LOG(INFO) << "Set read position = " << pos << " bufferSize=" << mTimePeriodBuffer.size();
     boost::mutex::scoped_lock lockWrite(mMutexSetReadPosition);
     mPos = pos;
 }
@@ -104,6 +101,7 @@ void BufferPoolThrottle::wait() {
             mCvStartThrottle.notifyOne();
         } else if (abs(mPos - mLastPos) > 10) {
             mReadAheadCount = 0;
+            mThrottleIndex.store(mPos.load());
             LOG(INFO) << "Discontinuous read position detected! Likely it's a search. Changed mThrottleIndex=" << mThrottleIndex;
         }
 
