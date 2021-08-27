@@ -7,12 +7,13 @@
 BufferPoolThrottle::BufferPoolThrottle(uint64_t preAllocBufSize)
     : mTimePeriodBuffer(preAllocBufSize)
     , mIdleCount(0)
-    , mPos(0)
     , mLastPosIdle(0)
+    , mPos(0)
     , mLastPos(0)
     , mExitRequested(false)
     , mThrottleRunning(false)
-    , mThrottleIndex(0) {
+    , mThrottleIndex(0)
+    , mReadAheadCount(0) {
     LOG(INFO) << "throttle constructor";
     mThrottleThread = std::shared_ptr<std::thread>(
             new std::thread(&BufferPoolThrottle::throttleLoop, this));
@@ -53,6 +54,8 @@ void BufferPoolThrottle::registerTimePeriod() {
     // Truncate the delta time to zero if it is less than threshold value
     if (time < TIME_PERIOD_TRUNCATION_THRESHOLD_US) {
         time = 0;
+    } else {
+        time -= TIME_PERIOD_TRUNCATION_THRESHOLD_US;
     }
 
     // Decrement the throttle index and the current and last position to
@@ -129,6 +132,7 @@ void BufferPoolThrottle::clear() {
     mThrottleIndex = 0;
     mPos = 0;
     mLastPos = 0;
+    mThrottleRunning = false;
 }
 
 void BufferPoolThrottle::clearToLastRead() {
@@ -137,14 +141,19 @@ void BufferPoolThrottle::clearToLastRead() {
     if (mTimePeriodBuffer.empty())
         return;
 
-    LOG(INFO) << "Channel changed!";
     auto numElements = mTimePeriodBuffer.size();
-    auto eraseCount = numElements - mLastPos - 1;
-    mTimePeriodBuffer.erase_end(eraseCount);
+
+    LOG(INFO) << "Channel changed! size=" << numElements << " lastPos=" << mLastPos;
+
+    if (mLastPos < numElements) {
+        auto eraseCount = numElements - mLastPos - 1;
+        mTimePeriodBuffer.erase_end(eraseCount);
+    }
 
     mStopWatchTimer.resetTimer();
     mReadAheadCount = 0;
     mThrottleIndex = 0;
+    mThrottleRunning = false;
 }
 
 void BufferPoolThrottle::throttleLoop() {

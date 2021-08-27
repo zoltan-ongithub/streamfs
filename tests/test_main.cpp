@@ -361,7 +361,7 @@ TEST_F(BufferPoolTest, PlayerReadThrottleTest) {
 
     boost::condition_variable cv;
 
-    // Nokia library buffer chunk rate in us.
+    // Buffer chunk rate in us.
     const uint32_t kBufferChunkRate      = 25000;
     // gstreamer buffer read size in bytes
     const uint32_t kPlayerReadSize       = 4096;
@@ -455,4 +455,62 @@ TEST_F(BufferPoolTest, PlayerReadThrottleTest) {
     t1.join();
     t2.join();
 }
+
+TEST(BufferPoolThrottle, RateTest) {
+    // Buffer chunk rate in us.
+    const uint32_t kBufferChunkRate      = 12500;
+    // Tolerated time inaccuracy allowed when throttle is applied
+    const uint32_t kAbsErrorThrottle     = 5000;
+    // Tolerated time inaccuracy allowed when throttle is not expected
+    const uint32_t kAbsErrorNoThrottle   = 5000;
+    // Total number of buffer registrations
+    const uint32_t kTotalBufferSize      = IDLE_LIMIT_COUNT + READ_AHEAD_COUNT + 110;
+
+    // Create vector of alternating reference buffer rates
+    std::vector<uint32_t> rate{0};
+    uint32_t refRate = kBufferChunkRate;
+    for (uint16_t pos = 1; pos < kTotalBufferSize; ++pos) {
+        if (pos % 5 == 0 ) {
+            if (refRate == kBufferChunkRate) {
+                refRate = kBufferChunkRate/2;
+            } else {
+                refRate = kBufferChunkRate;
+            }
+        }
+        rate.push_back(refRate);
+    }
+
+    BufferPoolThrottle throttle(1000);
+
+    // Register buffer chunk using the reference rate defined above
+    buffer_chunk chunk;
+    for (uint16_t pos = 0; pos < kTotalBufferSize; ++pos) {
+        memset(chunk.data(), pos, chunk.size());
+        std::this_thread::sleep_for(std::chrono::microseconds(rate[pos]));
+        throttle.registerTimePeriod();
+    }
+
+    // Validate throttle timing for the entire range of registered positions
+    for (uint16_t pos = 0; pos < kTotalBufferSize; ++pos) {
+        throttle.setReadPosition(pos);
+        std::chrono::high_resolution_clock::time_point lastTime = std::chrono::high_resolution_clock::now();
+        throttle.wait();
+        std::chrono::high_resolution_clock::time_point currentTime = std::chrono::high_resolution_clock::now();
+
+        std::chrono::microseconds diff = (std::chrono::duration_cast<std::chrono::microseconds>(currentTime-lastTime));
+        uint32_t readTime = diff.count();
+
+        if (pos < READ_AHEAD_COUNT) {
+            // Initial read ahead pos range. Buffer chunk rate should be close to zero
+            ASSERT_NEAR (0, readTime, kAbsErrorNoThrottle);
+        } else if (pos < kTotalBufferSize - LIVE_POSITION_THRESHOLD_INDEX) {
+            // Throttle pos range. Buffer chunk rate should match the alternating rate
+            ASSERT_NEAR (rate[pos], readTime, kAbsErrorThrottle);
+        } else {
+            // Live pos range. Buffer chunk rate should be close to zero
+            ASSERT_NEAR (0, readTime, kAbsErrorNoThrottle);
+        }
+    }
+}
+
 #endif

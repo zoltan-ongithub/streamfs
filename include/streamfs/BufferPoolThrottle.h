@@ -13,9 +13,12 @@
 #define IDLE_LIMIT_COUNT 100
 // Number of initial buffers allowed to be read by the player without
 // applying throttling after a channel or seek has change.
-#define READ_AHEAD_COUNT 100
+#define READ_AHEAD_COUNT 200
 // The buffer chunk time period truncation threshold in us. A registered
-// time period less than this value will be truncated to 0 us.
+// time period less than this value will be truncated to 0 us. Likewise,
+// registered time periods greater than this value will be reduced
+// accordingly as a mean to compensate for additional time comming
+// from code execution.
 #define TIME_PERIOD_TRUNCATION_THRESHOLD_US 500
 // The delta index between the time period buffer size and current read
 // position defining when to apply throttling / assuming TSB playback,
@@ -113,8 +116,8 @@ private:
     StopWatchTimer mStopWatchTimer;
     std::shared_ptr<std::thread> mThrottleThread;
 
-    uint16_t mIdleCount = 0;
-    uint64_t mLastPosIdle = 0;
+    uint16_t mIdleCount;
+    uint64_t mLastPosIdle;
 
     std::atomic<uint64_t> mPos;
     std::atomic<uint64_t> mLastPos;
@@ -122,6 +125,7 @@ private:
     std::atomic<bool> mExitRequested;
     std::atomic<bool> mThrottleRunning;
     std::atomic<uint64_t> mThrottleIndex;
+    std::atomic<uint64_t> mReadAheadCount;
 
     ConditionVariableHelper mCvStartThrottle;
     ConditionVariableHelper mCvThrottleChanged;
@@ -129,8 +133,6 @@ private:
 
     boost::mutex mMutexTimePeriodBuffer;
     boost::mutex mMutexSetReadPosition;
-
-    std::atomic<uint64_t> mReadAheadCount;
 
     void throttleLoop();
 };
