@@ -195,17 +195,13 @@ void BufferPool<buffer_chunk>::clearToLastRead() {
         return;
 
     auto numElements = mCircBuf.size();
-    auto eraseCount = numElements - mLastReadLocation - 1;
-    mCircBuf.erase_end(eraseCount);
-    mTotalBufCount -= eraseCount;
 
-   // CLEAR COMPLETE -- begin
-   //mGotLastBuffer = false;
-   //mTotalBufCount = 0;
-   //mReadEnd = 0;
-   //mLastBufferSize = 0;
-   //mCircBuf.clear();
-   // CLEAR COMPLETE -- end
+    if (numElements > mLastReadLocation) {
+        auto eraseCount = numElements - mLastReadLocation - 1;
+        mCircBuf.erase_end(eraseCount);
+        mTotalBufCount -= eraseCount;
+    }
+
 #ifdef BUFFER_CHUNK_READ_THROTTLING
     mThrottle->clearToLastRead();
 #endif

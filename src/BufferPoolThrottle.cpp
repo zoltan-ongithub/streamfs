@@ -64,7 +64,6 @@ void BufferPoolThrottle::registerTimePeriod() {
     if (mTimePeriodBuffer.size() == mTimePeriodBuffer.capacity()) {
         if (mThrottleIndex > 0) { --mThrottleIndex; }
         if (mPos > 0) { --mPos; }
-        if (mLastPos > 0) { --mLastPos; }
     }
 
     mTimePeriodBuffer.push_back(time);
@@ -142,9 +141,6 @@ void BufferPoolThrottle::clearToLastRead() {
         return;
 
     auto numElements = mTimePeriodBuffer.size();
-
-    LOG(INFO) << "Channel changed! size=" << numElements << " lastPos=" << mLastPos;
-
     if (mLastPos < numElements) {
         auto eraseCount = numElements - mLastPos - 1;
         mTimePeriodBuffer.erase_end(eraseCount);
