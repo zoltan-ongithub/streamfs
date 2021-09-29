@@ -4,12 +4,9 @@
 
 #include <cstring>
 #include "fuse/IFuse.h"
-#include <boost/filesystem.hpp>
 #include <string>
 #include <poll.h>
-
-#define fs boost::filesystem
-
+#include <iostream>
 static std::mutex mPollConfigMtx;
 
 std::mutex IFuse::mStateMtx;
@@ -20,7 +17,18 @@ static std::map<IFuse::ctx_id_t, bool> mEofReached;
 
 static uint64_t fh_counter_g  = 0;
 
+debug_flag_t IFuse::mDebugLevel(0);
+
+namespace fs = boost::filesystem;
+
 static struct fuse *g_fsel_fuse;
+
+static std::string intToHex(uint32_t val) {
+    std::stringstream stream;
+    stream <<  "0x" << std::hex << val;
+    std::string res( stream.str() );
+    return res;
+}
 
 IFuse::IFuse() {
 }
@@ -45,9 +53,9 @@ int
 IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
     memset(stbuf, 0, sizeof(struct stat));
 
-    fs::path p(path);
+    const fs::path p(path);
     std::string pluginName;
-
+    int result = 0;
     auto it = p.begin();
     std::advance(it, 1);
 
@@ -58,19 +66,20 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
 
     auto plugin = fsProviders.find(pluginName);
 
-    if (strcmp(path, "/") == 0) {
+    // Root path
+    if (p.compare(ROOT_PATH) == 0) {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
-        return 0;
-    }
-
-    if (!pluginName.empty() && plugin != fsProviders.end() && it == p.end()) {
+    } else if (!pluginName.empty() && plugin != fsProviders.end() && it == p.end()) {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
-        return 0;
+    } else if (p.compare(DEBUG_FILE_PATH) == 0) { // DEBUG path
+        auto res = intToHex(mDebugLevel);
+        stbuf->st_size = res.size();
+        stbuf->st_mode = S_IFREG | 0777;
     } else {
-        auto provider = findProvider(path);
-
+        auto provider = findProvider(path); // all providers
+        bool foundNode = false;
         if (provider != nullptr) {
             auto fsNodes = provider->getNodes();
             for (auto node : fsNodes) {
@@ -80,17 +89,24 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
                             stbuf->st_nlink = 2;
                             stbuf->st_size = provider->getSize(node.name);
                             stbuf->st_mode = S_IFREG | 0777;
-                            return 0;
+                            foundNode = true;
+                            break;
                         case DIRECTORY_TYPE:
                             stbuf->st_mode = S_IFDIR | 0755;
                             stbuf->st_nlink = 2;
-                            return 0;
+                            foundNode = true;
+                            break;
                     }
                 }
             }
         }
+
+        if (!foundNode) {
+            result = -ENOENT;
+        }
     }
-    return -ENOENT;
+
+    return result;
 }
 
 VirtualFSProvider *IFuse::findProvider(const char *path) {
@@ -117,7 +133,6 @@ IFuse::readDirCallback(
     fs::path p(path);
     auto b = p.begin();
     auto root = b->c_str();
-    auto pPair = fsProviders.find(root);
 
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
@@ -126,6 +141,7 @@ IFuse::readDirCallback(
         for (auto &provider : fsProviders) {
             filler(buf, provider.first.c_str(), NULL, 0);
         }
+        filler(buf, DEBUG_FILE_NAME, NULL, 0);
     } else {
         auto provider = findProvider(path);
         if (provider != nullptr) {
@@ -166,6 +182,11 @@ int IFuse::openCallback(const char
     fs::path p(path);
     auto b = p.begin();
     std::advance(b, 2);
+
+    if (p.compare(DEBUG_FILE_PATH) == 0) {
+        return 0;
+    }
+
     /**
      * TODO: add HASH based file name lookup.
      */
@@ -196,12 +217,23 @@ int IFuse::readCallback(const char *path, char *buf, size_t size, off_t offset,
     std::advance(b, 2);
     int result = 0;
 
+    if (p.compare(DEBUG_FILE_PATH) == 0) {
+
+        if (offset > 0 || size < sizeof (mDebugLevel)) {
+            return 0;
+        }
+
+        auto res = intToHex(mDebugLevel);
+        memcpy(buf, res.c_str(), res.size());
+        return res.size();
+    }
+
     /**
      * TODO: add HASH based file name lookup.
      */
     if (provider != nullptr) {
         auto fsNodes = provider->getNodes();
-        for (auto node : fsNodes) {
+        for (const auto& node : fsNodes) {
             if (node.name == b->string()) {
                 result = provider->read(fi->fh, node.name, buf, size, offset);
             }
@@ -237,6 +269,21 @@ int IFuse::writeFileCallback(
         off_t offset,
         struct fuse_file_info *) {
 
+    fs::path p(path);
+
+    if (p.compare(DEBUG_FILE_PATH) == 0) {
+        if (offset == 0) {
+            std::string inBuf(buf, bufSize);
+            try {
+                mDebugLevel = std::stoul(inBuf, nullptr, 16);
+            } catch (...){
+                return 0;
+            }
+            return bufSize;
+        } else {
+            return 0;
+        }
+    }
 
     auto provider = findProvider(path);
     auto node = findNode(provider, path);

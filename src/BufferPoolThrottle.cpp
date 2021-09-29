@@ -1,6 +1,8 @@
 #include "streamfs/BufferPoolThrottle.h"
 
 #include <glog/logging.h>
+#include <streamfs/LogLevels.h>
+#include <streamfs/Logging.h>
 
 #define BUFFER_POOL_READ_TIMEOUT_MS 1000
 
@@ -14,7 +16,7 @@ BufferPoolThrottle::BufferPoolThrottle(uint64_t preAllocBufSize)
     , mThrottleRunning(false)
     , mThrottleIndex(0)
     , mReadAheadCount(0) {
-    LOG(INFO) << "throttle constructor";
+    SLOG(INFO, LOG_BUFFER_THROTTLE) << "throttle constructor";
     mThrottleThread = std::shared_ptr<std::thread>(
             new std::thread(&BufferPoolThrottle::throttleLoop, this));
 
@@ -32,7 +34,7 @@ BufferPoolThrottle::BufferPoolThrottle(uint64_t preAllocBufSize)
 }
 
 BufferPoolThrottle::~BufferPoolThrottle() {
-    LOG(INFO) << "throttle destructor";
+    SLOG(INFO, LOG_BUFFER_THROTTLE) << "throttle destructor";
     mExitRequested = true;
     mThrottleRunning = false;
 
@@ -44,7 +46,7 @@ BufferPoolThrottle::~BufferPoolThrottle() {
         mThrottleThread->join();
     }
 
-    LOG(INFO) << "exit destructor";
+    SLOG(INFO, LOG_BUFFER_THROTTLE) << "exit destructor";
 }
 
 void BufferPoolThrottle::registerTimePeriod() {
@@ -93,30 +95,30 @@ void BufferPoolThrottle::wait() {
         ++mReadAheadCount;
     }
 
-    LOG(INFO) << "fetch buffer mPos=" << mPos << " mThrottleIndex=" << mThrottleIndex;
+    SLOG(INFO, LOG_BUFFER_THROTTLE) << "fetch buffer mPos=" << mPos << " mThrottleIndex=" << mThrottleIndex;
 
     if (mReadAheadCount > READ_AHEAD_COUNT) {
         if (!mThrottleRunning) {
             mThrottleIndex.store(mPos.load());
             mThrottleRunning = true;
-            LOG(INFO) << "notify mCvStartThrottle";
+            SLOG(INFO, LOG_BUFFER_THROTTLE) << "notify mCvStartThrottle";
             mCvStartThrottle.notifyOne();
         } else if (abs(mPos - mLastPos) > 10) {
             mReadAheadCount = 0;
             mThrottleIndex.store(mPos.load());
-            LOG(INFO) << "Discontinuous read position detected! Likely it's a search. Changed mThrottleIndex=" << mThrottleIndex;
+            SLOG(INFO, LOG_BUFFER_THROTTLE)<< "Discontinuous read position detected! Likely it's a search. Changed mThrottleIndex=" << mThrottleIndex;
         }
 
         // Wait for throttling to complete if the index position is greater than or equal to the throttle index
         // or the throttle loop is no longer running (e.g. triggered by the throttle loop itself if a timeout
         // occurs while waiting for buffers - see wait condition in the throttle loop)
         while (mPos >= mThrottleIndex && mThrottleRunning) {
-            LOG(INFO) << "waiting mPos=" << mPos << " mThrottleIndex=" <<mThrottleIndex;
+            SLOG(INFO, LOG_BUFFER_THROTTLE) << "waiting mPos=" << mPos << " mThrottleIndex=" <<mThrottleIndex;
             mCvThrottleChanged.wait([this](){ return mPos < mThrottleIndex || !mThrottleRunning; });
-            LOG(INFO) << "mThrottleIndex=" << mThrottleIndex;
+            SLOG(INFO, LOG_BUFFER_THROTTLE) << "mThrottleIndex=" << mThrottleIndex;
         }
     } else if (mReadAheadCount == READ_AHEAD_COUNT) {
-        LOG(INFO) << "readahead completed: " << mReadAheadCount;
+        SLOG(INFO, LOG_BUFFER_THROTTLE) << "readahead completed: " << mReadAheadCount;
         ++mReadAheadCount;
         mThrottleIndex.store(mPos.load());
     }
@@ -153,17 +155,17 @@ void BufferPoolThrottle::clearToLastRead() {
 }
 
 void BufferPoolThrottle::throttleLoop() {
-    LOG(INFO) << "   throttleLoop thread started";
+    SLOG(INFO, LOG_BUFFER_THROTTLE) << "   throttleLoop thread started";
     while (!mExitRequested) {
 
         mIdleCount = 0;
 
         if (!mThrottleRunning) {
-            LOG(INFO) << "   waiting for mCvStartThrottle";
+            SLOG(INFO, LOG_BUFFER_THROTTLE) << "   waiting for mCvStartThrottle";
             mCvStartThrottle.wait([this](){ return mExitRequested.load(); });
         }
 
-        LOG(INFO) << "   starting throttle loop";
+        SLOG(INFO, LOG_BUFFER_THROTTLE) << "   starting throttle loop";
         while (mThrottleRunning && !mExitRequested) {
             bool notifyThrottleIndexChanged = false;
             uint32_t time = 0;
@@ -175,7 +177,7 @@ void BufferPoolThrottle::throttleLoop() {
                 if(mThrottleIndex < mTimePeriodBuffer.size()) {
                     time = mTimePeriodBuffer[mThrottleIndex];
                     notifyThrottleIndexChanged = true;
-                    LOG(INFO) << "   fetch time=" << time << " for mThrottleIndex=" << mThrottleIndex;
+                    SLOG(INFO, LOG_BUFFER_THROTTLE) << "   fetch time=" << time << " for mThrottleIndex=" << mThrottleIndex;
                 }
             }
 
@@ -186,20 +188,20 @@ void BufferPoolThrottle::throttleLoop() {
                 // arrive or for the wait to timeout (e.g. due to buffer chunks injection
                 // stops), in which case we stop the throttle loop by setting
                 // mThrottleRunning to false.
-                LOG(INFO) << "   not enough data. mThrottleIndex=" << mThrottleIndex << " size=" << mTimePeriodBuffer.size();
+                SLOG(INFO, LOG_BUFFER_THROTTLE) << "   not enough data. mThrottleIndex=" << mThrottleIndex << " size=" << mTimePeriodBuffer.size();
                 if (!mCvTimePeriodRegistered.wait_for(BUFFER_POOL_READ_TIMEOUT_MS, [this](){ return mThrottleIndex < mTimePeriodBuffer.size(); })) {
-                    LOG(INFO) << "   ### timed out while waiting for new buffer! ###";
+                    SLOG(INFO, LOG_BUFFER_THROTTLE) << "   ### timed out while waiting for new buffer! ###";
                     mThrottleRunning = false;
                     mCvThrottleChanged.notifyOne();
                 } else {
-                    LOG(INFO) << "   New buffer received! mThrottleIndex=" << mThrottleIndex << " size=" << mTimePeriodBuffer.size();
+                    SLOG(INFO, LOG_BUFFER_THROTTLE) << "   New buffer received! mThrottleIndex=" << mThrottleIndex << " size=" << mTimePeriodBuffer.size();
                 }
             } else {
                 // If we are here, it means that we have fetched the buffer chunk
                 // time period associated with the current throttle index.
                 // We now sleep the amount of time corresponding to this.
                 std::this_thread::sleep_for(std::chrono::microseconds(time));
-                LOG(INFO) << "   sleep completed! mThrottleIndex=" << mThrottleIndex;
+                SLOG(INFO, LOG_BUFFER_THROTTLE) << "   sleep completed! mThrottleIndex=" << mThrottleIndex;
                 // ... and then increment the throttle index to point to the
                 // next time period in the time period buffer.
                 ++mThrottleIndex;
@@ -208,22 +210,22 @@ void BufferPoolThrottle::throttleLoop() {
 
                 if (mLastPos == mLastPosIdle) {
                     ++mIdleCount;
-                    LOG(INFO) << "   read position not changed! mLastPos=" << mLastPos << " mLastPosIdle=" << mLastPosIdle << " mIdleCount=" << mIdleCount;
+                    SLOG(INFO, LOG_BUFFER_THROTTLE) << "   read position not changed! mLastPos=" << mLastPos << " mLastPosIdle=" << mLastPosIdle << " mIdleCount=" << mIdleCount;
                 } else {
                     mIdleCount = 0;
                 }
             }
 
-            LOG(INFO) << "   mLastPos=" << mLastPos << " mLastPosIdle=" << mLastPosIdle << " mIdleCount=" << mIdleCount;
+            SLOG(INFO, LOG_BUFFER_THROTTLE) << "   mLastPos=" << mLastPos << " mLastPosIdle=" << mLastPosIdle << " mIdleCount=" << mIdleCount;
             mLastPosIdle = mLastPos;
             {
                 if (mIdleCount > IDLE_LIMIT_COUNT) {
-                    LOG(INFO) << "Stopping throttling. mIdleCount=" << mIdleCount << " " << mThrottleIndex << ">=" << mTimePeriodBuffer.size();
+                    SLOG(INFO, LOG_BUFFER_THROTTLE) << "Stopping throttling. mIdleCount=" << mIdleCount << " " << mThrottleIndex << ">=" << mTimePeriodBuffer.size();
                     mThrottleRunning = false;
                     mCvThrottleChanged.notifyOne();
                 }
             }
         }
     }
-    LOG(INFO) << "throttleLoop thread completed";
+    SLOG(INFO, LOG_BUFFER_THROTTLE) << "throttleLoop thread completed";
 }

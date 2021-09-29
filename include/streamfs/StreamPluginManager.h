@@ -11,14 +11,14 @@
 #include "PluginManagerConfig.h"
 #include "PluginImpl.h"
 #include "streamfs/PluginInterface.h"
-
+#include "Logging.h"
 namespace streamfs {
 
 /**
  * Plugin manager for dynamically loaded stream plugins
  */
 class StreamPluginManager {
-    typedef streamfs::PluginInterface *(*create_fn)(PluginCallbackInterface *);
+    typedef streamfs::PluginInterface *(*create_fn)(PluginCallbackInterface *, debug_flag_t* debugFlag);
 
     typedef const char *(*get_id_fn)();
 

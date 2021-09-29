@@ -21,7 +21,19 @@ PluginManagerConfig config = {
         .pluginDirectories = {".", "/usr/lib/streamfs/", "/usr/local/lib/streamfs"}
 };
 
+
 StreamPluginManager pluginManager;
+
+class parsed_args {
+public:
+    std::map<std::string, std::string> reserved_args; //args not passed to fuse
+    int argc = 0;
+    char** argv;
+
+    ~parsed_args() {
+        delete argv;
+    }
+};
 
 static int isSigtermTriggered = 0;
 static pthread_mutex_t sighandler_mutex;
@@ -40,15 +52,59 @@ void static sigterm_handler(int sig_received) {
         if (fuseMountPoint != nullptr) {
           int ret = umount2(fuseMountPoint,MNT_DETACH);
           if (ret != 0)
-            std::cout << "umount2 fails : "<< strerror(errno) << std::endl;
+            std::cerr << "umount2 fails : "<< strerror(errno) << std::endl;
         }
         else
-          std::cout << "invalid fuseMountPoint " << std::endl;
+          std::cerr << "invalid fuseMountPoint " << std::endl;
 
         signal(sig_received , SIG_DFL);
         raise(sig_received);
       }
       pthread_mutex_unlock(&sighandler_mutex);
+    }
+}
+void extract_reserved_args(int argc, char* argv[], parsed_args& p, uint32_t& debug_level) {
+    // TODO: make this more generic. Currently we only extract debug level info
+    bool found_debug_arg = false;
+    uint32_t debug_arg_loc = 0;
+    for(int i = 0; i < argc; i++) {
+        if ( strncmp(argv[i], "--debug_level", 13) == 0) {
+            if (i < argc - 1) {
+                found_debug_arg = true;
+                debug_arg_loc = i;
+            } else {
+                std::cerr << "Error: --debug_level needs an argument" << std::endl;
+                exit(-1);
+            }
+        }
+    }
+
+    if (!found_debug_arg) {
+        p.argc = argc;
+        p.argv = new char*[p.argc + 1];
+        for(int i = 0; i < argc; i++) {
+            p.argv[i] = argv[i];
+        }
+    } else {
+        p.argc = argc - 2;
+        p.argv = new char*[ p.argc + 1];
+        int i = 0;
+        int j = 0;
+        do  {
+            // skip
+            if (debug_arg_loc == i) {
+                try {
+                    debug_level = std::stoul(argv[i + 1], nullptr, 16);
+                } catch (...) {
+                    debug_level  = atoi(argv[i + 1]);
+                }
+                i += 2;
+                continue;
+            }
+            p.argv[j] = argv[i];
+            j++;
+            i++;
+        } while (j < p.argc);
     }
 }
 
@@ -61,7 +117,18 @@ int main(int argc, char *argv[])
     FLAGS_colorlogtostderr = true;
     FLAGS_log_prefix = true;
 
-    struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+    parsed_args p;
+    uint32_t  debug_level;
+
+    extract_reserved_args(argc, argv, p, debug_level);
+
+    IFuse::mDebugLevel = debug_level;
+    if (debug_level !=0 ) {
+        LOG(INFO) << "Enable debug flags:" << debug_level << std::endl;
+    }
+
+    struct fuse_args args = FUSE_ARGS_INIT(p.argc, p.argv);
+
     if (fuse_parse_cmdline(&args, &fuseMountPoint, NULL, NULL) != 0) {
       std::cout << "fuse_parse_cmdline Failed " << std::endl;
     }
@@ -73,10 +140,11 @@ int main(int argc, char *argv[])
     sigAction.sa_flags = SA_ONSTACK;
     sigaction (SIGTERM, &sigAction, NULL);
 
-    google::InitGoogleLogging(argv[0]);
+    google::InitGoogleLogging(p.argv[0]);
     assert(pluginManager.loadPlugins(config) == 0);
     pluginManager.initPlugins();
     fuse_operations o  = IFuse::getInstance().getFuseOperations();
-    return fuse_main(argc, argv, &o, NULL);
+
+    return fuse_main(p.argc, p.argv, &o, NULL);
 }
 

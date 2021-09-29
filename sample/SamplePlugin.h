@@ -11,6 +11,7 @@
 #include <streamfs/BufferConsumer.h>
 #include <streamfs/ByteBufferPool.h>
 #include "streamfs/PluginCallbackInterface.h"
+#include "fuse/IFuse.h"
 
 namespace streamfs {
 
@@ -19,7 +20,7 @@ class SamplePlugin : public PluginInterface {
     std::map<uri_type, std::shared_ptr<ByteBufferPool>> mBufferPool;
 
 public:
-    explicit SamplePlugin(PluginCallbackInterface* cb);
+    explicit SamplePlugin(PluginCallbackInterface* cb,  debug_flag_t *debugFlag);
 
     std::string getId() override;
 
@@ -50,8 +51,8 @@ private:
 }
 
 extern "C" {
-streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface *cb) {
-    return new streamfs::SamplePlugin(cb);
+    streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface *cb, debug_flag_t *debugFlag ) {
+        return new streamfs::SamplePlugin(cb,   debugFlag);
 }
 
 const char *GET_STREAMFS_PLUGIN_ID() {

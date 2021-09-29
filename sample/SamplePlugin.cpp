@@ -20,7 +20,7 @@ public:
         mPlugin->newBufferNotify(buffer);
     }
 
-    explicit SampleConsumer(SamplePlugin* plugin) : mPlugin(plugin) {}
+    explicit SampleConsumer(SamplePlugin* plugin) : mPlugin(plugin){}
 
 private:
     SamplePlugin* mPlugin;
@@ -127,12 +127,13 @@ private:
 extern "C" size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 {
     std::lock_guard<std::mutex> lockGuard(writeLock);
-    SampleProducer* producer = (SampleProducer*) stream;
+    auto* producer = (SampleProducer*) stream;
     return producer->write(ptr, size, nmemb);
 }
 
-SamplePlugin::SamplePlugin(PluginCallbackInterface* cb) :
-    PluginInterface(cb) {
+SamplePlugin::SamplePlugin(PluginCallbackInterface* cb,
+                           debug_flag_t *debugFlag) :
+    PluginInterface(cb, debugFlag) {
         mAvailableStreams.emplace_back("test1.tst");
         mAvailableStreams.emplace_back("test2.tst");
         mAvailableStreams.emplace_back("test3.tst");
@@ -147,7 +148,6 @@ static int  read_offset_c = 0;
 
 int SamplePlugin::open(std::string uri) {
     std::lock_guard<std::mutex> lockGuard(mFopMutex);
-    std::cout << "Opened path:" << uri << std::endl;
     read_offset_c = 0;
     if (mBufferPool.find(uri) != mBufferPool.end()) {
         return 0;
@@ -181,7 +181,7 @@ int SamplePlugin::read(uint64_t handle, std::string path, char *buf, size_t size
     static int i = 0;
 
     if (read_offset_c%20 == 0 ) {
-        printf("Reading offset %lu size%zud\n", offset, size);
+        printf("Reading offset %llu size%zud\n", offset, size);
     }
 
     read_offset_c++;
@@ -191,8 +191,7 @@ int SamplePlugin::read(uint64_t handle, std::string path, char *buf, size_t size
         return 0;
     }
 
-    auto res = bQueue->second->readRandomAccess(buf, size , offset);
-    return res;
+    return bQueue->second->readRandomAccess(buf, size , offset);
 }
 
 void SamplePlugin::newBufferNotify(buffer_chunk &buffer) {

@@ -14,8 +14,6 @@
 #include <streamfs/VirtualFSProvider.h>
 #include <fuse/IFuse.h>
 
-namespace fs = boost::filesystem;
-
 namespace streamfs {
 
 StreamPluginManager::StreamPluginManager() = default;
@@ -75,15 +73,15 @@ void StreamPluginManager::unloadPlugins() {
 int StreamPluginManager::loadPlugins(const PluginManagerConfig &configuration) {
     std::lock_guard<std::mutex> lock(mPluginMtx);
     std::set<std::string> sharedLibs;
-
+    SLOG(WARNING, LOG_PLUGIN_MGR) << "Loading plugins";
     mPlugins.clear();
 
     for (auto dir: configuration.pluginDirectories) {
-        if (!fs::exists(dir)) {
+        if (!boost::filesystem::exists(dir)) {
             continue;
         }
-        for (const auto &entry : fs::directory_iterator(dir)) {
-            if (fs::is_regular_file(entry.status())) {
+        for (const auto &entry : boost::filesystem::directory_iterator(dir)) {
+            if (boost::filesystem::is_regular_file(entry.status())) {
                 if (entry.path().extension() == ".so") {
                     sharedLibs.insert(entry.path().string());
                 }
@@ -145,7 +143,7 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig &configuration) {
         auto *pin(new streamfs::PluginCbImpl(pluginIdTmp));
 
         auto *cb = dynamic_cast<PluginCallbackInterface *>(pin);
-        std::shared_ptr<streamfs::PluginInterface> plugin(creator(cb));
+        std::shared_ptr<streamfs::PluginInterface> plugin(creator(cb, &IFuse::mDebugLevel));
 
         if (plugin == nullptr) {
             dlclose(hndl);
@@ -168,7 +166,7 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig &configuration) {
 
         if (plugin->getInterfaceVersion() != STREAMFS_INTERFACE_VERSION) {
             LOG(WARNING) << "Incorrect interface version: " << plugin->getInterfaceVersion() <<
-                         " minimum interface version requested: " << STREAMFS_INTERFACE_VERSION;
+                           " minimum interface version requested: " << STREAMFS_INTERFACE_VERSION;
             LOG(WARNING) << "Plugin ignored: " << plugin->getId();
             continue;
         }

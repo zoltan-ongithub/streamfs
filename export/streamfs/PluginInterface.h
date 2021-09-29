@@ -5,6 +5,7 @@
 #ifndef STREAMFS_PLUGININTERFACE_H
 #define STREAMFS_PLUGININTERFACE_H
 
+#include <atomic>
 #include <string>
 #include <vector>
 #include <memory>
@@ -15,17 +16,20 @@
 #include "PluginService.h"
 #include "PluginCallbackInterface.h"
 
+typedef std::atomic<uint32_t> debug_flag_t;
+
 namespace streamfs {
 class PluginService;
 
-#define STREAMFS_INTERFACE_VERSION 3
+#define STREAMFS_INTERFACE_VERSION 4
 
 /**
  * Generic plugin interface for 3rd party plugins
  */
 class PluginInterface : public PluginService {
 public:
-    PluginInterface(PluginCallbackInterface* cb) : PluginService(cb), mCb(cb) {};
+    PluginInterface(PluginCallbackInterface* cb, debug_flag_t* debugFlag) : PluginService(cb), mCb(cb),
+    mDebugFlag(debugFlag) {};
 
     /**
    * Update plugin configuration. Called first time before `registerCallback`
@@ -65,6 +69,7 @@ public:
     virtual uint32_t getInterfaceVersion() { return STREAMFS_INTERFACE_VERSION; }
 
     PluginCallbackInterface* mCb;
+    debug_flag_t * mDebugFlag;
 
 };
 
@@ -72,7 +77,7 @@ public:
 
 extern "C" {
 // Implement function in plugin to create a new plugin interface
-streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface* cb);
+streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface* cb,  debug_flag_t *debugFlag);
 
 // Implement function to return streamfs ID
 const char *GET_STREAMFS_PLUGIN_ID();
