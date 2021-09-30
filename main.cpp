@@ -2,9 +2,11 @@
 #include <assert.h>
 
 #define FUSE_USE_VERSION 26
+
 #include <fuse.h>
 #include "streamfs/StreamPluginManager.h"
 using namespace streamfs;
+
 #include <glog/logging.h>
 #include <fuse/IFuse.h>
 

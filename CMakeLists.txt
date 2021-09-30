@@ -49,6 +49,7 @@ add_library(buqu SHARED
         export/streamfs/BufferProducer.h
         src/BufferConsumer.cpp
         src/ByteBufferPool.cpp
+        src/Logging.cpp
 )
 
 add_library(streamlink SHARED
@@ -68,6 +69,7 @@ add_library(streamlink SHARED
         src/VirtualFSProvider.cpp
         include/streamfs/VirtualFSProvider.h
         src/fuse/IFuse.cpp
+        src/Logging.cpp
         include/fuse/IFuse.h
         export/streamfs/BufferConsumer.h
         src/PluginCbImpl.cpp

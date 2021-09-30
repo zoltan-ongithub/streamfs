@@ -17,8 +17,6 @@ static std::map<IFuse::ctx_id_t, bool> mEofReached;
 
 static uint64_t fh_counter_g  = 0;
 
-debug_flag_t IFuse::mDebugLevel(0);
-
 namespace fs = boost::filesystem;
 
 static struct fuse *g_fsel_fuse;
