@@ -4,7 +4,7 @@
 #include <streamfs/LogLevels.h>
 #include <streamfs/Logging.h>
 
-#define BUFFER_POOL_READ_TIMEOUT_MS 1000
+#define BUFFER_POOL_READ_TIMEOUT_MS 4000
 
 BufferPoolThrottle::BufferPoolThrottle(uint64_t preAllocBufSize)
     : mTimePeriodBuffer(preAllocBufSize)

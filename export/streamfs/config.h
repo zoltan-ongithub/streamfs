@@ -20,6 +20,6 @@ BOOST_STATIC_ASSERT( BUFFER_CHUNK_SIZE % TS_PACKAGE_SIZE == 0);
 #define MAX_BUFFER_LIST_COUNT 256
 
 // Buffer read timeout in milliseconds
-#define BUFFER_POOL_READ_TIMEOUT_MS 2000
+#define BUFFER_POOL_READ_TIMEOUT_MS 4000
 
 using buffer_chunk  = std::array<unsigned char, BUFFER_CHUNK_SIZE>;
