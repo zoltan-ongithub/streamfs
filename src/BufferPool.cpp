@@ -75,17 +75,30 @@ size_t BufferPool<buffer_chunk>::read(
         || offset > mTotalBufCount
         || length > capacity
             ) {
-        LOG(WARNING) << "BufferPool::read : return 0 : length : " << length << " buffer-offset : " << offset << " mTotalBufCount : " << mTotalBufCount << " mCircBuf.capacity() : " << mCircBuf.capacity() << " capacity : " << capacity;
+        LOG(WARNING) << "BufferPool::read : return 0 : length : " <<
+            length << " buffer-offset : " << offset << " mTotalBufCount : " <<
+            mTotalBufCount << " mCircBuf.capacity() : " << mCircBuf.capacity()
+            << " capacity : " << capacity;
         return 0;
     }
 
     auto readEnd = offset + length;
     if (readEnd > mTotalBufCount && !mGotLastBuffer) {
         boost::chrono::duration<double> timeout = boost::chrono::milliseconds(BUFFER_POOL_READ_TIMEOUT_MS);
-        if (!mNotEnoughBytes.wait_for(lock, timeout, [this, readEnd](){ return readEnd <= mTotalBufCount || mGotLastBuffer; })) {
+
+        if (!mNotEnoughBytes.wait_for(lock, timeout, [this, readEnd](){
+            auto result = readEnd <= mTotalBufCount || mGotLastBuffer || mAborting;
+            return result;
+          })) {
             LOG(INFO) << __FUNCTION__ << ": no buffer chunks received before read timout";
             return 0;
         }
+
+        if (mAborting) {
+            mAborting = false;
+            return 0;
+        }
+
         mReadEnd = readEnd;
     }
 
@@ -93,6 +106,13 @@ size_t BufferPool<buffer_chunk>::read(
     auto off = 0;
     {
         boost::mutex::scoped_lock lock(m_w_mutex);
+
+        //RDK-2310 workaround
+        if ( mCircBuf.empty()) {
+            LOG(INFO) << "RDK-2310 BUG: size should be non-zero. exit read";
+            return 0;
+        }
+
         size_t lastItemCopySize;
         size_t leftSkip;
         size_t rightSkip;
@@ -161,6 +181,7 @@ void BufferPool<buffer_chunk>::clear() {
 
 template<>
 void BufferPool<buffer_chunk>::pushBuffer(const buffer_chunk &buffer, bool lastBuffer, size_t lastBufferSize) {
+
     if (exitPending)
         return;
 #ifdef BUFFER_CHUNK_READ_THROTTLING
@@ -174,7 +195,6 @@ void BufferPool<buffer_chunk>::pushBuffer(const buffer_chunk &buffer, bool lastB
             mGotLastBuffer = true;
             mLastBufferSize = lastBufferSize;
         }
-
         mNotEnoughBytes.notify_one();
     }
 
@@ -209,7 +229,8 @@ void BufferPool<buffer_chunk>::clearToLastRead() {
 
 template<>
 void BufferPool<buffer_chunk>::abortAllOperations() {
+    mAborting = true ;
+    mNotEnoughBytes.notify_all();
     boost::mutex::scoped_lock lock(m_w_mutex);
     mProducer->stop();
-    mNotEnoughBytes.notify_all();
 }

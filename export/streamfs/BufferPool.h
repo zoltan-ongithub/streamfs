@@ -9,12 +9,13 @@
 #include <boost/thread/condition.hpp>
 
 #include <sys/mman.h>
+#include <atomic>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include <thread>
 #include <glog/logging.h>
-
+#include <atomic>
 #include "config.h"
 #include <array>
 #include "BufferProducer.h"
@@ -150,7 +151,7 @@ private:
     std::shared_ptr<BufferProducer<T>> mProducer;
     std::shared_ptr<BufferConsumer<T>> mConsumer;
     boost::circular_buffer<T , streamfs_allocator<T>> mCircBuf;
-    uint64_t mTotalBufCount;
+    std::atomic<uint64_t> mTotalBufCount;
     boost::mutex m_mutex;
     boost::mutex m_w_mutex;
 
@@ -162,7 +163,7 @@ private:
     size_t mLastBufferSize;
     bool exitPending = false;
     uint64_t mLastStartPos = 0;
-
+    std::atomic<bool> mAborting = {false};
 #ifdef BUFFER_CHUNK_READ_THROTTLING
     std::unique_ptr<BufferPoolThrottle> mThrottle;
 #endif

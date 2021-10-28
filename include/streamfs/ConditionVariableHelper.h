@@ -42,7 +42,7 @@ public:
     bool wait_for(uint64_t timeout_ms, predicate_type pred) {
         boost::unique_lock<boost::mutex> lock(mMutex);
         boost::chrono::duration<double> timeout = boost::chrono::milliseconds(timeout_ms);
-        bool status = mConditionVariable.wait_for(lock, timeout, [&pred, this](){ bool status = pred(); return mNotified || status; });
+        bool status = mConditionVariable.wait_for(lock, timeout, [&pred, this](){bool status = pred(); return mNotified || status; });
         mNotified = false;
         return status;
     }
