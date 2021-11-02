@@ -1,6 +1,9 @@
 
-from os import close
-from tsanalyzer import ErrorListener
+from os import close, stat
+from typing import Counter
+from graphtools import ContErroListener
+from sysloganalyzer import SysLogAnalyzer
+from errorlistener import ErrorListener
 from tslistener import TSListener
 from tssrc import TSSrc
 import socket
@@ -69,23 +72,27 @@ class StreamFSStreamListener(TSSrc, threading.Thread):
 
 
 if __name__ == "__main__":
-    test = StreamFSStreamListener()
-    from tsanalyzer import TSAnalyzer, TSErrorCode, ErrorListener
+    tsFileListener = StreamFSStreamListener()
+    from tsanalyzer import TSAnalyzer, ErrorListener
 
-    class ContErroListener(ErrorListener):
-        counter = 0
-        def on_error_detected(self, error: TSErrorCode, packet: str):
-            self.counter +=1
-            print(self.counter)
-            print("Got continuity error")
-    error_listener = ContErroListener();
+    import time
+    from multiprocessing import  Lock
 
-    a = TSAnalyzer(error_listener)
+    ## Continous error monitoring
+    error_listener = ContErroListener()
+    error_listener.start()
 
-    test.register_listener(a)
-    test.open("/mnt/streamfs/fcc/stream0.ts")
+    ## Syslog analyzer
+    syslog_an = SysLogAnalyzer(error_listener)
+
+    ## TS analyzer
+    tsAnalyzer = TSAnalyzer(error_listener)
+
+    tsFileListener.register_listener(tsAnalyzer)
+    tsFileListener.open("/mnt/streamfs/fcc/stream0.ts")
+
     input("Press Enter to continue...")
 
-    a.close()
-    test.close()
+    tsAnalyzer.close()
+    tsFileListener.close()
 

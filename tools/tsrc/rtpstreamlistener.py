@@ -105,7 +105,6 @@ if __name__ == "__main__":
             self.counter +=1
             print(self.counter)
             print("Got continuity error: " + str(error))
-            print(packet)
 
     error_listener = ContErroListener();
 

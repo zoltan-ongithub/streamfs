@@ -1,5 +1,5 @@
 
-# Transport stream analyzer
+# Syslog analyzer
 # Author: Zoltan Kuscsik <zoltan@zkres.com>
 
 from abc import abstractmethod
@@ -13,7 +13,7 @@ from multiprocessing import  Lock
 import os
 
 
-class TSAnalyzer(TSListener, threading.Thread):
+class SysLogAnalyzer(threading.Thread):
     stop_event = threading.Event()
     mutex = Lock()
 
@@ -23,7 +23,7 @@ class TSAnalyzer(TSListener, threading.Thread):
         '''
         super().__init__()
         self.listener = listener
-        self.process = subprocess.Popen(['dvbsnoop', '-s', 'ts', '-nph', '0x100',  '-if', '-'],
+        self.process = subprocess.Popen(['journalctl', '-f'],
                      stdout = subprocess.PIPE, 
                      stderr = subprocess.STDOUT,
                      stdin = subprocess.PIPE)  
@@ -49,30 +49,10 @@ class TSAnalyzer(TSListener, threading.Thread):
             with self.mutex:
                 for line in iter(self.process.stdout.readline, b''):
                     data = line.decode()
-                    if ( DVBSNOOP_SEPARATOR in data):
-                        if (print_next_packet):
-                            self.listener.on_error_detected(next_packet_error, packet)
-                            print_next_packet = False
-                            next_packet_error = None
-                        packet = ""
-
                     # Match errors
-                    for k in self.listener.error_list.keys():
+                    for k in self.listener.sylog_error_list.keys():
                         if (k in data):
-                            print_next_packet = True
-                            next_packet_error = self.listener.error_list[k]
-                    
-                    packet += data
+                            self.listener.on_error_detected(self.listener.sylog_error_list[k], data)
 
                     if (self.stop_event.is_set()):
                         return
-        
-    def new_ts_packet(self, data : bytes):
-        '''
-        New ts packet received
-        '''
-        try:
-            if (self.process.poll() is None):
-                self.process.stdin.write(data)
-        except Exception:
-            pass
