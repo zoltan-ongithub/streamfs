@@ -2,7 +2,8 @@
 # Transport stream analyzer
 # Author: Christo Joseph <christo.j@tataelxsi.co.in>
 
-from errorlistener import ErrorListener
+from errorlistener import ErrorListener, TSErrorCode
+from sysloganalyzer import SysLogAnalyzer
 from tslistener import TSListener
 
 MPEG_TS_PACKET_SIZE=188
@@ -76,3 +77,45 @@ class TSAnalyzer(TSListener):
             self.residue_buffer = bytearray(data[packet_idx:])
         else:
             self.residue_buffer = bytearray(0)
+
+
+class ErrorTracker(ErrorListener):
+    """
+    TS stream error counter.
+    Count number of different errors
+    """
+
+    error_count =  {} 
+
+    def __init__(self):
+        self._syslog_an = SysLogAnalyzer(self)
+        self._tsAnalyzer = TSAnalyzer(self)
+        pass
+
+    def on_error_detected(self, error: TSErrorCode, packet : str):
+        print("------------- got error ----------------- + ")
+        if (error not in self.error_count.keys()):
+            self.error_count[error] = 1
+        else:
+            self.error_count[error] += 1   
+        
+
+    def clear(self):
+        """
+        Clear errors
+        """
+        self.error_count.clear()
+
+    def get_error_listener(self):
+        """
+        Return the error listener
+        """
+        return self._tsAnalyzer
+
+    def close(self):
+        """
+        Close
+        """
+        self._syslog_an.close()
+        self._tsAnalyzer.close()
+
