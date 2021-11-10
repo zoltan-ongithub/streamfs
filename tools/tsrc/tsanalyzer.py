@@ -85,7 +85,7 @@ class ErrorTracker(ErrorListener):
     Count number of different errors
     """
 
-    error_count =  {} 
+    error_count =  {} # [] () {}
 
     def __init__(self):
         self._syslog_an = SysLogAnalyzer(self)
@@ -93,7 +93,6 @@ class ErrorTracker(ErrorListener):
         pass
 
     def on_error_detected(self, error: TSErrorCode, packet : str):
-        print("------------- got error ----------------- + ")
         if (error not in self.error_count.keys()):
             self.error_count[error] = 1
         else:

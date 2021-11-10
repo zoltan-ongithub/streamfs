@@ -23,6 +23,7 @@ TS_CAPTURE_TIME_S = 10
 
 # Path to stream0.ts streamfs node
 STREAMFS_STREAM0_PATH = "/mnt/streamfs/fcc/stream0.ts"
+STREAMFS_CHANNEL_SELECT0_PATH = "/mnt/streamfs/fcc/chan_select0"
 
 # Path to channel selection streamfs node
 
