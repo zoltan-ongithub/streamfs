@@ -95,6 +95,7 @@ size_t BufferPool<buffer_chunk>::read(
         }
 
         if (mAborting) {
+            LOG(INFO) << __FUNCTION__ << ": Aborting read";
             mAborting = false;
             return 0;
         }
@@ -221,6 +222,7 @@ void BufferPool<buffer_chunk>::clearToLastRead() {
         mCircBuf.erase_end(eraseCount);
         mTotalBufCount -= eraseCount;
     }
+    mAborting = false;
 
 #ifdef BUFFER_CHUNK_READ_THROTTLING
     mThrottle->clearToLastRead();
