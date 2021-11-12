@@ -26,8 +26,10 @@ STREAMFS_STREAM0_PATH = "/mnt/streamfs/fcc/stream0.ts"
 STREAMFS_CHANNEL_SELECT0_PATH = "/mnt/streamfs/fcc/chan_select0"
 
 # Path to channel selection streamfs node
-
 STREAMFS_CHAN_SELECT0_PATH = "/mnt/streamfs/fcc/chan_select0"
+
+# Path to seek control streamfs node
+STREAMFS_SEEK0_PATH = "/mnt/streamfs/fcc/seek0"
 
 # Streamfs TCP server configuration
 STREAMFS_HOST = '127.0.0.1'
