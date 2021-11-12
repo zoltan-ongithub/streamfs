@@ -47,6 +47,7 @@ class TSAnalyzer(TSListener):
         '''
         New ts packet received
         '''
+        
         residue_buffer_len = len(self.residue_buffer)
         packet_idx = 0
         if (residue_buffer_len):

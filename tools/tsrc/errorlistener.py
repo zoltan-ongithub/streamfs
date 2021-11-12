@@ -10,6 +10,7 @@ class TSErrorCode(Enum):
     CONTINUITY_ERROR = 1
     DEMUXER_AUDIO_ERROR = 2
     DEMUXER_VIDEO_ERROR = 3 
+    CPU_LOAD = 4
 
 class ErrorListener(ABC):
     '''

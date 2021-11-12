@@ -33,7 +33,6 @@ class StreamContCheck(unittest.TestCase):
     def test_SocketStreamCapture(self):
         """
         Check currently tuned channel for continuity test.
-
         """
         error_counter = ErrorTracker()
 
@@ -59,7 +58,5 @@ class StreamContCheck(unittest.TestCase):
 
         pass
 
-
-
-if __name__ == """__main__""":
+    if __name__ == """__main__""":
     unittest.main()

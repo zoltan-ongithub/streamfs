@@ -1,5 +1,7 @@
 import socket
 from urllib.parse import urlparse
+from graphtools import ContErroListener
+from sysloganalyzer import SysLogAnalyzer
 
 from test_vectors import STREAMFS_HOST, STREAMFS_PORT
 import threading
@@ -70,3 +72,28 @@ class SocketStreamListener(TSSrc, threading.Thread):
 
         if (self.is_alive()):
             self.join()
+
+if __name__ == "__main__":
+    tsFileListener = SocketStreamListener()
+    from tsanalyzer import TSAnalyzer, ErrorListener
+
+    import time
+    from multiprocessing import  Lock
+
+    ## Continous error monitoring
+    error_listener = ContErroListener()
+    error_listener.start()
+
+    ## Syslog analyzer
+    syslog_an = SysLogAnalyzer(error_listener)
+
+    ## TS analyzer
+    tsAnalyzer = TSAnalyzer(error_listener)
+
+    tsFileListener.register_listener(tsAnalyzer)
+    tsFileListener.open("telnet://" + STREAMFS_HOST + ":" +str(STREAMFS_PORT))
+
+    input("Press Enter to continue...")
+
+    tsAnalyzer.close()
+    tsFileListener.close()
