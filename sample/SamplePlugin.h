@@ -20,7 +20,7 @@ class SamplePlugin : public PluginInterface {
     std::map<uri_type, std::shared_ptr<ByteBufferPool>> mBufferPool;
 
 public:
-    explicit SamplePlugin(PluginCallbackInterface* cb,  debug_flag_t *debugFlag);
+    explicit SamplePlugin(PluginCallbackInterface* cb,  debug_options_t *debugOptions);
 
     std::string getId() override;
 
@@ -51,8 +51,8 @@ private:
 }
 
 extern "C" {
-    streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface *cb, debug_flag_t *debugFlag ) {
-        return new streamfs::SamplePlugin(cb,   debugFlag);
+    streamfs::PluginInterface *INIT_STREAMFS_PLUGIN(streamfs::PluginCallbackInterface *cb, debug_options_t *debugOptions) {
+        return new streamfs::SamplePlugin(cb, debugOptions);
 }
 
 const char *GET_STREAMFS_PLUGIN_ID() {

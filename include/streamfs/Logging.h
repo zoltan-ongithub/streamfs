@@ -8,4 +8,4 @@
 #include "streamfs/LogLevels.h"
 #include "fuse/IFuse.h"
 
-#define SLOG(x, level) LOG_IF(x, IFuse::mDebugLevel & (level))
+#define SLOG(x, level) LOG_IF(x, IFuse::mDebugOptions.debugLevel & (level))

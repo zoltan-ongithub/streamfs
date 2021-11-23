@@ -71,8 +71,12 @@ IFuse::getAttrCallback(const char *path, struct stat *stbuf) {
     } else if (!pluginName.empty() && plugin != fsProviders.end() && it == p.end()) {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
-    } else if (p.compare(DEBUG_FILE_PATH) == 0) { // DEBUG path
-        auto res = intToHex(mDebugLevel);
+    } else if (p.compare(DEBUG_FILE_PATH) == 0) { // DEBUG LEVEL path
+        auto res = intToHex(mDebugOptions.debugLevel);
+        stbuf->st_size = res.size();
+        stbuf->st_mode = S_IFREG | 0777;
+    } else if (p.compare(TS_DUMP_FILE_PATH) == 0) { // TS DUMP ENABLE/DISABLE path
+        auto res = std::to_string(mDebugOptions.tsDumpEnable);
         stbuf->st_size = res.size();
         stbuf->st_mode = S_IFREG | 0777;
     } else {
@@ -139,6 +143,7 @@ IFuse::readDirCallback(
         for (auto &provider : fsProviders) {
             filler(buf, provider.first.c_str(), NULL, 0);
         }
+        filler(buf, TS_DUMP_FILE_NAME, NULL, 0);
         filler(buf, DEBUG_FILE_NAME, NULL, 0);
     } else {
         auto provider = findProvider(path);
@@ -181,7 +186,7 @@ int IFuse::openCallback(const char
     auto b = p.begin();
     std::advance(b, 2);
 
-    if (p.compare(DEBUG_FILE_PATH) == 0) {
+    if (p.compare(DEBUG_FILE_PATH) == 0 || p.compare(TS_DUMP_FILE_PATH) == 0) {
         return 0;
     }
 
@@ -217,11 +222,22 @@ int IFuse::readCallback(const char *path, char *buf, size_t size, off_t offset,
 
     if (p.compare(DEBUG_FILE_PATH) == 0) {
 
-        if (offset > 0 || size < sizeof (mDebugLevel)) {
+        if (offset > 0 || size < sizeof (mDebugOptions.debugLevel)) {
             return 0;
         }
 
-        auto res = intToHex(mDebugLevel);
+        auto res = intToHex(mDebugOptions.debugLevel);
+        memcpy(buf, res.c_str(), res.size());
+        return res.size();
+    }
+
+    if (p.compare(TS_DUMP_FILE_PATH) == 0) {
+
+        if (offset > 0 || size < sizeof (mDebugOptions.tsDumpEnable)) {
+            return 0;
+        }
+
+        auto res = std::to_string(mDebugOptions.tsDumpEnable);
         memcpy(buf, res.c_str(), res.size());
         return res.size();
     }
@@ -273,7 +289,21 @@ int IFuse::writeFileCallback(
         if (offset == 0) {
             std::string inBuf(buf, bufSize);
             try {
-                mDebugLevel = std::stoul(inBuf, nullptr, 16);
+                mDebugOptions.debugLevel = std::stoul(inBuf, nullptr, 16);
+            } catch (...){
+                return 0;
+            }
+            return bufSize;
+        } else {
+            return 0;
+        }
+    }
+
+    if (p.compare(TS_DUMP_FILE_PATH) == 0) {
+        if (offset == 0) {
+            std::string inBuf(buf, bufSize);
+            try {
+                mDebugOptions.tsDumpEnable = std::stoi(inBuf);
             } catch (...){
                 return 0;
             }

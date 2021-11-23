@@ -15,13 +15,14 @@ extern "C" {
 #include <streamfs/VirtualFSProvider.h>
 #include <map>
 #include <boost/filesystem.hpp>
+#include "streamfs/DebugOptions.h"
 
 #define DEBUG_FILE_NAME "debug"
-
-typedef std::atomic<uint32_t> debug_flag_t;
+#define TS_DUMP_FILE_NAME "ts_dump"
 
 static const boost::filesystem::path ROOT_PATH("/");
 static const boost::filesystem::path DEBUG_FILE_PATH("/" DEBUG_FILE_NAME );
+static const boost::filesystem::path TS_DUMP_FILE_PATH("/" TS_DUMP_FILE_NAME );
 
 class IFuse : public FileInterface {
 
@@ -30,7 +31,7 @@ protected:
 
 public:
 
-    static debug_flag_t mDebugLevel;
+    static debug_options_t mDebugOptions;
 
     /**
      * Plugin identifier type

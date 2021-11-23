@@ -1,2 +1,2 @@
 #include <fuse/IFuse.h>
-debug_flag_t IFuse::mDebugLevel(0);
+debug_options_t IFuse::mDebugOptions;

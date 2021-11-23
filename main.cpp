@@ -26,15 +26,21 @@ PluginManagerConfig config = {
 
 StreamPluginManager pluginManager;
 
-class parsed_args {
-public:
-    std::map<std::string, std::string> reserved_args; //args not passed to fuse
-    int argc = 0;
-    char** argv;
+debug_options_t IFuse::mDebugOptions;
 
-    ~parsed_args() {
-        delete argv;
-    }
+// Custom command line options
+static struct options {
+    uint debug_level;
+    bool ts_dump;
+} options;
+
+#define OPTION(t, p)                           \
+     { t, offsetof(struct options, p), 1 }
+
+static const struct fuse_opt option_spec[] = {
+        OPTION("--debug_level=%d", debug_level),
+        OPTION("--ts_dump=%d", ts_dump),
+        FUSE_OPT_END
 };
 
 static int isSigtermTriggered = 0;
@@ -65,50 +71,6 @@ void static sigterm_handler(int sig_received) {
       pthread_mutex_unlock(&sighandler_mutex);
     }
 }
-void extract_reserved_args(int argc, char* argv[], parsed_args& p, uint32_t& debug_level) {
-    // TODO: make this more generic. Currently we only extract debug level info
-    bool found_debug_arg = false;
-    uint32_t debug_arg_loc = 0;
-    for(int i = 0; i < argc; i++) {
-        if ( strncmp(argv[i], "--debug_level", 13) == 0) {
-            if (i < argc - 1) {
-                found_debug_arg = true;
-                debug_arg_loc = i;
-            } else {
-                std::cerr << "Error: --debug_level needs an argument" << std::endl;
-                exit(-1);
-            }
-        }
-    }
-
-    if (!found_debug_arg) {
-        p.argc = argc;
-        p.argv = new char*[p.argc + 1];
-        for(int i = 0; i < argc; i++) {
-            p.argv[i] = argv[i];
-        }
-    } else {
-        p.argc = argc - 2;
-        p.argv = new char*[ p.argc + 1];
-        int i = 0;
-        int j = 0;
-        do  {
-            // skip
-            if (debug_arg_loc == i) {
-                try {
-                    debug_level = std::stoul(argv[i + 1], nullptr, 16);
-                } catch (...) {
-                    debug_level  = atoi(argv[i + 1]);
-                }
-                i += 2;
-                continue;
-            }
-            p.argv[j] = argv[i];
-            j++;
-            i++;
-        } while (j < p.argc);
-    }
-}
 
 int main(int argc, char *argv[])
 {
@@ -119,21 +81,27 @@ int main(int argc, char *argv[])
     FLAGS_colorlogtostderr = true;
     FLAGS_log_prefix = true;
 
-    parsed_args p;
-    uint32_t  debug_level;
+    struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
-    extract_reserved_args(argc, argv, p, debug_level);
+    if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1)
+        return 1;
 
-    IFuse::mDebugLevel = debug_level;
-    if (debug_level !=0 ) {
-        LOG(INFO) << "Enable debug flags:" << debug_level << std::endl;
+    IFuse::mDebugOptions.debugLevel = options.debug_level;
+    IFuse::mDebugOptions.tsDumpEnable = options.ts_dump;
+
+    if (options.debug_level !=0 ) {
+        LOG(INFO) << "Enable debug flags:" << options.debug_level << std::endl;
     }
 
-    struct fuse_args args = FUSE_ARGS_INIT(p.argc, p.argv);
-
-    if (fuse_parse_cmdline(&args, &fuseMountPoint, NULL, NULL) != 0) {
-      std::cout << "fuse_parse_cmdline Failed " << std::endl;
+    if (options.ts_dump) {
+        LOG(INFO) << "Enable ts dump:" << options.ts_dump << std::endl;
     }
+
+    struct fuse_args args_cmd = FUSE_ARGS_INIT(argc, argv);
+    if (fuse_parse_cmdline(&args_cmd, &fuseMountPoint, NULL, NULL) != 0) {
+        std::cout << "fuse_parse_cmdline Failed " << std::endl;
+    }
+    fuse_opt_free_args(&args_cmd);
 
     //TODO: fuse signal handler need to be used in future
     struct sigaction sigAction;
@@ -142,11 +110,14 @@ int main(int argc, char *argv[])
     sigAction.sa_flags = SA_ONSTACK;
     sigaction (SIGTERM, &sigAction, NULL);
 
-    google::InitGoogleLogging(p.argv[0]);
+    google::InitGoogleLogging(argv[0]);
     assert(pluginManager.loadPlugins(config) == 0);
     pluginManager.initPlugins();
+
     fuse_operations o  = IFuse::getInstance().getFuseOperations();
+    int ret = fuse_main(args.argc, args.argv, &o, NULL);
 
-    return fuse_main(p.argc, p.argv, &o, NULL);
+    fuse_opt_free_args(&args);
+
+    return ret;
 }
-

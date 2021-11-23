@@ -132,8 +132,8 @@ extern "C" size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 }
 
 SamplePlugin::SamplePlugin(PluginCallbackInterface* cb,
-                           debug_flag_t *debugFlag) :
-    PluginInterface(cb, debugFlag) {
+                           debug_options_t *debugOptions) :
+    PluginInterface(cb, debugOptions) {
         mAvailableStreams.emplace_back("test1.tst");
         mAvailableStreams.emplace_back("test2.tst");
         mAvailableStreams.emplace_back("test3.tst");

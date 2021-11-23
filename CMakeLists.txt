@@ -33,6 +33,7 @@ set(PUBLIC_HEADERS
         export/streamfs/PluginService.h
         export/streamfs/ServiceRequest.h
         export/streamfs/LogLevels.h
+        export/streamfs/DebugOptions.h
 )
 
 include_directories(

@@ -143,7 +143,7 @@ int StreamPluginManager::loadPlugins(const PluginManagerConfig &configuration) {
         auto *pin(new streamfs::PluginCbImpl(pluginIdTmp));
 
         auto *cb = dynamic_cast<PluginCallbackInterface *>(pin);
-        std::shared_ptr<streamfs::PluginInterface> plugin(creator(cb, &IFuse::mDebugLevel));
+        std::shared_ptr<streamfs::PluginInterface> plugin(creator(cb, &IFuse::mDebugOptions));
 
         if (plugin == nullptr) {
             dlclose(hndl);

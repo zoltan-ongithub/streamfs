@@ -18,7 +18,7 @@ namespace streamfs {
  * Plugin manager for dynamically loaded stream plugins
  */
 class StreamPluginManager {
-    typedef streamfs::PluginInterface *(*create_fn)(PluginCallbackInterface *, debug_flag_t* debugFlag);
+    typedef streamfs::PluginInterface *(*create_fn)(PluginCallbackInterface *, debug_options_t * debugOptions);
 
     typedef const char *(*get_id_fn)();
 
