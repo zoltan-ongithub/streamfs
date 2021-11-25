@@ -33,7 +33,7 @@ class SocketStreamListener(TSSrc, threading.Thread):
             self.socket.connect((self.parsed_uri.hostname, self.parsed_uri.port))
             while (not self.stop_event.is_set()):
                 try:
-                    data = self.socket.recv(1024)
+                    data = self.socket.recv(42112)
                 except ConnectionResetError:
                     # Connection closed
                     return
