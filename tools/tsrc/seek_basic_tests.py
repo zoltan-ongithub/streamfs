@@ -1,48 +1,26 @@
 #
-# TSB seek tests
+# TSB basic seek tests
 #
 import unittest
-from streamfssocketclient import SocketStreamListener
+from streamfssocketclient import SocketStreamListener, enableTsSocketDump
 from test_vectors import STREAMFS_HOST, STREAMFS_PORT, STREAMFS_SEEK0_PATH
 from tsanalyzer import ErrorTracker
 from channelselector import ChannelSelector, SelectorType, CHANNEL_LIST, ChannelId
 from keymaps import send_key_press
-import random
+from seek_api import SeekControl
 
 import time
-
-class SeekControl:
-
-    def setSeek(self, position : int):
-        f = open(STREAMFS_SEEK0_PATH, "w")
-        if (not f):
-            f.close()
-            return False
-
-        f.write(str(position))
-        f.close()
-        return True
-
-    def getTsbSize(self) -> int:
-        f = open(STREAMFS_SEEK0_PATH)
-        if (not f):
-            f.close()
-            return False
-
-        tsbSize = int(f.read().strip().split(',')[1])
-        f.close()
-        return tsbSize
 
 class SeekContCheck(unittest.TestCase):
     error_counter = ErrorTracker()
     streamfsListener = SocketStreamListener()
     selector = ChannelSelector()
-    seek = SeekControl()
+    seek = SeekControl(STREAMFS_SEEK0_PATH)
 
     @classmethod
     def setUpClass(cls):
-        cls.selector.select_channel(CHANNEL_LIST[ChannelId.CHAN_BBC_WORLD_NEWS]['uri'], SelectorType.STREAMFS_CHANNEL_SELECTION)
-        time.sleep(1)
+        enableTsSocketDump()
+        time.sleep(3)
         cls.streamfsListener.open("telnet://" + STREAMFS_HOST + ":" +str(STREAMFS_PORT))
         cls.error_counter.clear()
         cls.streamfsListener.register_listener(cls.error_counter.get_error_listener())
@@ -114,47 +92,27 @@ class SeekContCheck(unittest.TestCase):
             self.assertEqual(len(self.error_counter.error_count), 0)
 
     def test_simple_seek_clear(self):
+        print("Executing test_simple_seek_clear")
         self.simple_seek(CHANNEL_LIST[ChannelId.CHAN_DR1]['uri'])
         pass
     
     def test_simple_seek_encrypted(self):
+        print("Executing test_simple_seek_encrypted")
         self.simple_seek(CHANNEL_LIST[ChannelId.CHAN_TV_2]['uri'])
         pass
 
     def test_pause_resume_clear(self):
+        print("Executing test_pause_resume_clear")
         self.pause_resume(CHANNEL_LIST[ChannelId.CHAN_DR_RAMASJANG]['uri'])
         print("Errors detected:" + str(self.error_counter.error_count))
         self.assertEqual(len(self.error_counter.error_count), 0)
         pass
 
     def test_pause_resume_encrypted(self):
+        print("Executing test_pause_resume_encrypted")
         self.pause_resume(CHANNEL_LIST[ChannelId.CHAN_TV3]['uri'])
         print("Errors detected:" + str(self.error_counter.error_count))
         self.assertEqual(len(self.error_counter.error_count), 0)
-        pass
-
-    def test_seek_pattern_increase_clear(self):
-        pattern = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-        self.pattern_seek(CHANNEL_LIST[ChannelId.CHAN_DR_RAMASJANG]['uri'], pattern, 10, 3)
-        pass
-
-    def test_seek_pattern_increase_encrypted(self):
-        pattern = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-        self.pattern_seek(CHANNEL_LIST[ChannelId.CHAN_BBC_WORLD_NEWS]['uri'], pattern, 10, 3)
-        pass
-
-    def test_seek_pattern_random_clear(self):
-        pattern = []
-        for i in range(0, 10):
-            pattern.append(random.uniform(0,1))
-        self.pattern_seek(CHANNEL_LIST[ChannelId.CHAN_DR2]['uri'], pattern, 10, 3)
-        pass
-
-    def test_seek_pattern_random_encrypted(self):
-        pattern = []
-        for i in range(0, 10):
-            pattern.append(random.uniform(0,1))
-        self.pattern_seek(CHANNEL_LIST[ChannelId.CHAN_CNN]['uri'], pattern, 10, 3)
         pass
 
 if __name__ == """__main__""":

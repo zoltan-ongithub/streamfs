@@ -31,6 +31,9 @@ STREAMFS_CHAN_SELECT0_PATH = "/mnt/streamfs/fcc/chan_select0"
 # Path to seek control streamfs node
 STREAMFS_SEEK0_PATH = "/mnt/streamfs/fcc/seek0"
 
+# Path to fsnode for enabling/disabling TS dump over socket
+STREAMFS_TS_ENABLE_PATH = "/mnt/streamfs/ts_dump"
+
 # Streamfs TCP server configuration
 STREAMFS_HOST = '127.0.0.1'
 STREAMFS_PORT = 9995

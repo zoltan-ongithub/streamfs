@@ -3,12 +3,25 @@ from urllib.parse import urlparse
 from graphtools import ContErroListener
 from sysloganalyzer import SysLogAnalyzer
 
-from test_vectors import STREAMFS_HOST, STREAMFS_PORT
+from test_vectors import STREAMFS_HOST, STREAMFS_PORT, STREAMFS_TS_ENABLE_PATH
 import threading
 
 from tslistener import TSListener
 from tssrc import TSSrc
- 
+
+from keymaps import set_program
+
+def enableTsSocketDump():
+    ## Open fsnode for enabling TS dumping over socket connection
+    f = open(STREAMFS_TS_ENABLE_PATH, "w")
+    if (not f):
+        f.close()
+    else:
+        ## Enable TS dump
+        f.write("1")
+        f.close()
+        ## Change channel to initiate the enabling
+        set_program(1)
 
 class SocketStreamListener(TSSrc, threading.Thread):
 
@@ -79,6 +92,7 @@ if __name__ == "__main__":
 
     import time
     from multiprocessing import  Lock
+    enableTsSocketDump()
 
     ## Continous error monitoring
     error_listener = ContErroListener()

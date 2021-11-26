@@ -1,8 +1,8 @@
 #
-# TSB seek tests
+# Channel switch tests
 #
 import unittest
-from streamfssocketclient import SocketStreamListener
+from streamfssocketclient import SocketStreamListener, enableTsSocketDump
 from test_vectors import CHANNEL_DR1, CHANNEL_TV2_NEWS, STREAMFS_HOST, STREAMFS_PORT, TS_CAPTURE_TIME_S, channel_to_uri
 from tsanalyzer import ErrorTracker
 from channelselector import ChannelSelector, SelectorType, CHANNEL_LIST, ChannelId
@@ -18,6 +18,7 @@ class ChannelSwitchTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
+        enableTsSocketDump()
         self.streamfsListener.open("telnet://" + STREAMFS_HOST + ":" +str(STREAMFS_PORT))
         self.error_counter.clear()
         self.streamfsListener.register_listener(self.error_counter.get_error_listener())
