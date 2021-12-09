@@ -96,6 +96,14 @@ public:
 
     virtual ~BufferPool();
 
+    /**
+     * Enable (true) or disable (false) player read throttling
+     * for read or readRandomAccess methods.
+     *
+     * @param enable - boolean for enabling/disable throttling
+     */
+    void enableReadThrottling(bool enableThrottle);
+
     virtual size_t read(char* bufferChunks, size_t length, uint64_t offset, size_t left_padding , size_t right_padding ) = 0;
 
     virtual size_t readRandomAccess(char* data, size_t size, uint64_t offsetBytes)  = 0;
@@ -156,8 +164,8 @@ private:
     boost::mutex m_w_mutex;
 
     boost::condition_variable mNotEnoughBytes;
+    std::atomic<bool> mEnableThrottle;
     uint64_t mLastReadLocation;
-
     uint64_t mReadEnd;
     bool  mGotLastBuffer;
     size_t mLastBufferSize;
