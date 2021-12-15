@@ -13,7 +13,7 @@
 #define IDLE_LIMIT_COUNT 100
 // Number of initial buffers allowed to be read by the player without
 // applying throttling after a channel or seek has change.
-#define READ_AHEAD_COUNT 20
+#define READ_AHEAD_COUNT 30
 // The buffer chunk time period truncation threshold in us. A registered
 // time period less than this value will be truncated to 0 us. Likewise,
 // registered time periods greater than this value will be reduced
