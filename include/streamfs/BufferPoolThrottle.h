@@ -111,6 +111,13 @@ public:
      */
     void clearToLastRead();
 
+    /**
+     * Enable (true) or disable (false) throttling when calling wait().
+     *
+     * @param enable - boolean for enabling/disable throttling
+     */
+    void enableThrottling(bool enable);
+
 private:
     boost::circular_buffer<uint32_t> mTimePeriodBuffer;
     StopWatchTimer mStopWatchTimer;
@@ -122,6 +129,7 @@ private:
     std::atomic<uint64_t> mPos;
     std::atomic<uint64_t> mLastPos;
 
+    std::atomic<bool> mEnableThrottling;
     std::atomic<bool> mExitRequested;
     std::atomic<bool> mThrottleRunning;
     std::atomic<uint64_t> mThrottleIndex;

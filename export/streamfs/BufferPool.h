@@ -102,7 +102,7 @@ public:
      *
      * @param enable - boolean for enabling/disable throttling
      */
-    void enableReadThrottling(bool enableThrottle);
+    void enableReadThrottling(bool enable);
 
     virtual size_t read(char* bufferChunks, size_t length, uint64_t offset, size_t left_padding , size_t right_padding ) = 0;
 
@@ -164,7 +164,6 @@ private:
     boost::mutex m_w_mutex;
 
     boost::condition_variable mNotEnoughBytes;
-    std::atomic<bool> mEnableThrottle;
     uint64_t mLastReadLocation;
     uint64_t mReadEnd;
     bool  mGotLastBuffer;

@@ -12,6 +12,7 @@ BufferPoolThrottle::BufferPoolThrottle(uint64_t preAllocBufSize)
     , mLastPosIdle(0)
     , mPos(0)
     , mLastPos(0)
+    , mEnableThrottling(true)
     , mExitRequested(false)
     , mThrottleRunning(false)
     , mThrottleIndex(0)
@@ -79,12 +80,19 @@ void BufferPoolThrottle::setReadPosition(uint64_t pos) {
 
 void BufferPoolThrottle::wait() {
     boost::mutex::scoped_lock lockWrite(mMutexSetReadPosition);
-
-    // If the delta position between the size of the time period
-    // buffer and the read position index less or equal to the
-    // LIVE_POSITION_THRESHOLD_INDEX, it will be considered as
-    // Live playback meaning that throttle will not be applied.
-    if (mTimePeriodBuffer.size() - mPos <= LIVE_POSITION_THRESHOLD_INDEX) {
+    // If throttle is not enabled make sure that throttle will
+    // not be applied OR if the delta position between the size
+    // of the time period buffer and the read position index
+    // less or equal to the LIVE_POSITION_THRESHOLD_INDEX, it
+    // will be considered as Live playback meaning that throttle
+    // likewise should not be applied.
+    if (!mEnableThrottling || mTimePeriodBuffer.size() - mPos <= LIVE_POSITION_THRESHOLD_INDEX) {
+        // Update the last read position (mLastPos) with the current
+        // read position (mPos) to ensure this is still in sync.
+        // This is in particular needed to ensure that the correct
+        // number of buffers is erased in clearToLastRead() if this
+        // method is called when throttling is disabled or playing
+        // back at live position.
         mLastPos.store(mPos.load());
         // Make sure the throttle loop will stop if it is running.
         mThrottleRunning = false;
@@ -143,6 +151,7 @@ void BufferPoolThrottle::clearToLastRead() {
         return;
 
     auto numElements = mTimePeriodBuffer.size();
+
     if (mLastPos < numElements) {
         auto eraseCount = numElements - mLastPos - 1;
         mTimePeriodBuffer.erase_end(eraseCount);
@@ -152,6 +161,10 @@ void BufferPoolThrottle::clearToLastRead() {
     mReadAheadCount = 0;
     mThrottleIndex = 0;
     mThrottleRunning = false;
+}
+
+void BufferPoolThrottle::enableThrottling(bool enable) {
+    mEnableThrottling = enable;
 }
 
 void BufferPoolThrottle::throttleLoop() {

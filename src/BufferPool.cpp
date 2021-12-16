@@ -18,8 +18,7 @@ BufferPool<T>::BufferPool (
         std::shared_ptr<BufferProducer<T>> producer,
         std::shared_ptr<BufferConsumer<T>> consumer,
         uint64_t preAllocBufSize)
-        : mEnableThrottle(true)
-        , mLastReadLocation(0)
+        : mLastReadLocation(0)
         , mReadEnd(0)
         , mProducer(producer)
         , mConsumer(consumer)
@@ -43,8 +42,8 @@ BufferPool<T>::~BufferPool() {
 }
 
 template <typename T>
-void BufferPool<T>::enableReadThrottling(bool enableThrottle) {
-    mEnableThrottle = enableThrottle;
+void BufferPool<T>::enableReadThrottling(bool enable) {
+    mThrottle->enableThrottling(enable);
 }
 
 template<>
@@ -159,9 +158,7 @@ size_t BufferPool<buffer_chunk>::read(
     }
 
 #ifdef BUFFER_CHUNK_READ_THROTTLING
-    if (mEnableThrottle) {
-        mThrottle->wait();
-    }
+    mThrottle->wait();
 #endif
     return off;
 }
